@@ -105,7 +105,7 @@ week ending 2026-10-10: 30 attempts, 24 solved (80%), 895 min
 
 ## Honest limitations
 
-The bandit needs about 20 log attempts to get enough data to work properly. Before that the posterior is mostly prior and the picks are close to random. That is by design, but expect it.
+The bandit needs about 20 log attempts to get enough data to work properly. Before that the posterior is mostly prior and the picks are close to random. That is by design, but expected.
 
 Forgetting is not modeled. If you ignore graphs for a month, your graph mastery stays where it was. Spaced repetition is on the roadmap, not in the code.
 
