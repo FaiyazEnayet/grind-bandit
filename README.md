@@ -2,7 +2,7 @@
 
 Your LeetCode grind as a contextual bandit.
 
-I used to grind problems at random. Arrays on Monday, whatever felt easy on Tuesday. My DP stayed bad for months. So I built the thing that picks my next problem for me. It explores my weak topics and exploits what is almost mastered. That tradeoff is handled by Bayes, not by vibes.
+I used to grind problems at random. Arrays on Monday, whatever felt easy on Tuesday. My DP stayed bad for months. So I built the thing that picks my next problem for me. It explores my weak topics and exploits what is almost mastered. That tradeoff is handled by Bayes.
 
 ## The math
 
