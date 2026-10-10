@@ -2,7 +2,7 @@
 
 Your LeetCode grind as a contextual bandit.
 
-This is a tool to ease the finding of your next leetcode problem. It explores my weak topics and exploits what is almost mastered. That tradeoff is handled by Bayes.
+This is a tool to ease the finding of your next leetcode problem. It explores weak topics and exploits what is almost mastered. That tradeoff is handled by Bayes.
 
 ## The math
 
