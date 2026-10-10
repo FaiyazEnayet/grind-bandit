@@ -25,7 +25,7 @@ State lives in `~/.grind-bandit/state.json`. Set `GRIND_BANDIT_STATE` to move it
 
 ## A real session
 
-I scripted a user who solves 90 percent of array and string problems and 30 percent of DP, graph, and backtracking ones. Thirty attempts logged, then:
+This scripted a user who solves 90 percent of array and string problems and 30 percent of DP, graph, and backtracking ones. Thirty attempts logged, then:
 
 ```
 $ grind-bandit next --seed 3
