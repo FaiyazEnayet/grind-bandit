@@ -105,12 +105,11 @@ week ending 2026-10-10: 30 attempts, 24 solved (80%), 895 min
 
 ## Honest limitations
 
-The bandit is dumb until you log about 20 attempts. Before that the posterior is mostly prior and the picks are close to random. That is by design, but expect it.
+The bandit needs about log 20 attempts. Before that the posterior is mostly prior and the picks are close to random. That is by design, but expect it.
 
 Forgetting is not modeled. If you ignore graphs for a month, your graph mastery stays where it was. Spaced repetition is on the roadmap, not in the code.
 
-The problem bank is 122 hand picked classics, not all of LeetCode. Coverage is good for interview prep and thin everywhere else.
-
+The problem bank is 122 hand picked classics, not all of LeetCode. Coverage is good for interview prep.
 The reward is mastery gain, which favors easy wins early. If you only log Easy solves, the bandit will keep feeding you Easy problems until the difficulty match feature catches up. Log honestly.
 
 ## License
