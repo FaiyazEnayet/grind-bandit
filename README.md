@@ -8,7 +8,7 @@ This is a tool to ease the finding of your next leetcode problem. It explores we
 
 Each topic gets a Beta Bernoulli skill model. A solve adds a win, a fail adds a loss. Mastery is the posterior mean. New topics start at 50 percent, which is maximum uncertainty.
 
-Each problem gets a context vector with five features: the mastery gap on its weakest topic, the mean gap across its topics, difficulty match, days since I last touched those topics, and a bias term. Difficulty match is the auto adjustment. Below 40 percent mastery it scores Easy problems higher. Above 70 percent it wants Hard ones.
+Each problem gets a context vector with five specific features: the mastery gap on its weakest topic, the mean gap across its topics, difficulty match, days since I last touched those topics, and a bias term. Difficulty match is the auto adjustment. Below 40 percent mastery it scores Easy problems higher. Above 70 percent it wants Hard ones.
 
 The bandit is Thompson sampling over a linear model of expected learning gain. The reward for an attempt is the mastery gain in the problem's weakest topic. Early on the posterior is wide, so sampling explores. As evidence arrives it concentrates, so sampling exploits. There is no epsilon to tune.
 
