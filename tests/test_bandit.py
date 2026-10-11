@@ -82,3 +82,16 @@ def test_explain_mentions_weakest_topic():
     mastery.update(s, ["dp"], False, 0.0)
     lines = bandit.explain(_problem(["dp", "array"]), s, 1000.0)
     assert any("dp" in line for line in lines)
+
+
+def test_stale_topic_resurfaces_in_context():
+    from grindbandit import mastery as mst
+
+    DAY = 86400.0
+    s = {}
+    mst.update(s, ["dp"], True, 0.0)  # one win, then silence
+    p = {"id": 1, "title": "T", "difficulty": "Easy", "topics": ["dp"]}
+    x_now = bandit.context(p, s, 0.0)
+    x_late = bandit.context(p, s, 60 * DAY)
+    assert x_late[0] > x_now[0]   # gap_min grew as mastery decayed
+    assert x_late[3] > x_now[3]   # recency grew too

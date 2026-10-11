@@ -22,9 +22,10 @@ def by_id(bank: list[dict], pid: int) -> dict | None:
 
 
 def slug(title: str) -> str:
-    s = title.lower()
-    s = re.sub(r"[^a-z0-9 ]", "", s)
-    return re.sub(r"\s+", "-", s.strip())
+    s = title.lower().replace(" - ", " ")
+    s = re.sub(r"[^a-z0-9 -]", "", s)
+    s = re.sub(r"\s+", "-", s.strip())
+    return re.sub(r"-{2,}", "-", s)
 
 
 def url(problem: dict) -> str:

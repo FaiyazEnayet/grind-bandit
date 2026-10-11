@@ -55,7 +55,7 @@ def weakest_topic(problem: dict, topic_mastery: dict) -> str:
 def context(problem: dict, state: dict, now: float) -> np.ndarray:
     from . import mastery as mst
 
-    tm = {t: mst.mean(state, t) for t in problem["topics"]}
+    tm = {t: mst.mean(state, t, now) for t in problem["topics"]}
     ms = list(tm.values())
     gap_min = 1.0 - min(ms)
     gap_mean = 1.0 - sum(ms) / len(ms)
@@ -106,7 +106,7 @@ def explain(problem: dict, state: dict, now: float) -> list[str]:
 
     x = context(problem, state, now)
     mean, _ = get_posterior(state)
-    tm = {t: mst.mean(state, t) for t in problem["topics"]}
+    tm = {t: mst.mean(state, t, now) for t in problem["topics"]}
     weak = weakest_topic(problem, tm)
     lines = [f"weakest topic here: {weak} (mastery {tm[weak]:.0%})"]
 

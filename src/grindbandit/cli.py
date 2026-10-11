@@ -74,11 +74,11 @@ def cmd_log(args) -> None:
     solved = args.result == "solved"
     now = _now()
     x = bandit.context(p, state, now)
-    tm = {t: mastery.mean(state, t) for t in p["topics"]}
+    tm = {t: mastery.mean(state, t, now) for t in p["topics"]}
     weak = bandit.weakest_topic(p, tm)
     before = tm[weak]
     mastery.update(state, p["topics"], solved, now)
-    after = mastery.mean(state, weak)
+    after = mastery.mean(state, weak, now)
     reward = max(-1.0, min(1.0, after - before))
     bandit.observe(state, x, reward)
     st.record_attempt(state, p, solved, args.minutes, reward, now)
@@ -87,7 +87,7 @@ def cmd_log(args) -> None:
     print(f"reward, defined as mastery gain in {weak}: {reward:+.3f}")
 
 
-def _heatmap(state: dict, bank: list[dict]) -> list[str]:
+def _heatmap(state: dict, bank: list[dict], now: float) -> list[str]:
     topics = problems.all_topics(bank)
     cols = 4
     width = 22
@@ -100,7 +100,7 @@ def _heatmap(state: dict, bank: list[dict]) -> list[str]:
         )
         cells = []
         for t in row:
-            m = mastery.mean(state, t)
+            m = mastery.mean(state, t, now)
             shade = BLOCKS[min(3, int(m * 4))]
             cells.append(f" {shade * 8} {m:>4.0%}      ")
         lines.append("|" + "|".join(cells) + "|")
@@ -113,14 +113,14 @@ def cmd_stats(args) -> None:
     bank = problems.load()
     now = _now()
     print("Mastery heatmap (darker blocks mean stronger mastery):")
-    for line in _heatmap(state, bank):
+    for line in _heatmap(state, bank, now):
         print(line)
     print()
     print(f"{'topic':<18}{'mastery':<9}{'tried':<8}{'solved':<9}{'last practiced'}")
-    tm = mastery.mastery_map(state)
+    tm = mastery.mastery_map(state, now)
     topics = state.get("topics", {})
-    for t in sorted(topics, key=lambda t: mastery.mean(state, t)):
-        m = mastery.mean(state, t)
+    for t in sorted(topics, key=lambda t: mastery.mean(state, t, now)):
+        m = mastery.mean(state, t, now)
         info = topics[t]
         last = info.get("last_ts")
         if last is None:

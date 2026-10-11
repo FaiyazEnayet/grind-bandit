@@ -103,3 +103,25 @@ def test_reset_wipes_state(iso_state, capsys):
     cli.main(["reset", "--yes"])
     s = st.load()
     assert s["log"] == [] and s["topics"] == {}
+
+
+def test_slug_preserves_hyphens():
+    assert problems.slug("K-diff Pairs in an Array") == "k-diff-pairs-in-an-array"
+    assert problems.slug("Maximum Depth of N-ary Tree") == "maximum-depth-of-n-ary-tree"
+    assert problems.slug("Two Sum IV - Input is a BST") == "two-sum-iv-input-is-a-bst"
+    assert problems.slug("Reverse Nodes in k-Group") == "reverse-nodes-in-k-group"
+    assert problems.slug("Pow(x, n)") == "powx-n"
+    assert problems.slug("Pascal's Triangle") == "pascals-triangle"
+
+
+def test_bank_problems_have_valid_shape():
+    bank = problems.load()
+    assert len(bank) >= 200
+    ids = [p["id"] for p in bank]
+    assert len(set(ids)) == len(ids)
+    for p in bank:
+        assert set(p) == {"id", "title", "difficulty", "topics"}
+        assert p["difficulty"] in ("Easy", "Medium", "Hard")
+        assert p["topics"]
+        assert problems.url(p).startswith("https://leetcode.com/problems/")
+        assert " " not in problems.url(p)
