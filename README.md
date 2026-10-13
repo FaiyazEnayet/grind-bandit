@@ -7,11 +7,11 @@
 
 Your LeetCode grind as a contextual bandit.
 
-I used to grind problems at random. Arrays on Monday, whatever felt easy on Tuesday. My DP stayed bad for months. So I built the thing that picks my next problem for me. It explores my weak topics and exploits what is almost mastered. Bayes handles that tradeoff, not vibes.
+Did you used to grind problems at random?. Arrays on Monday, whatever felt easy on Tuesday. Does your DP stay bad for months? This is built for finding your next problem for you. It explores weak topics and exploits what is almost mastered. Bayes handles that tradeoff, not vibes.
 
 ## Live interactive demo
 
-The dashboard below is a single self contained HTML file. It runs the real engine, not a reimplementation. Open it for the full interactive version with Thompson sampling recommendations, forgetting projections, and the searchable problem bank.
+The dashboard below is a single self-contained HTML file. It runs the real engine, not a reimplementation. Open it for the full interactive version with Thompson sampling recommendations, forgetting projections, and the searchable problem bank.
 
 [![Live interactive demo](https://img.shields.io/badge/open%20the%20dashboard-docs%2Fdashboard.html-brightgreen)](https://faiyazenayet.github.io/grind-bandit/docs/dashboard.html)
 
@@ -23,7 +23,7 @@ The animation above replays the scripted demo session from the section below. Ea
 
 Each topic gets a Beta Bernoulli skill model. A solve adds a win. A fail adds a loss. Mastery is the posterior mean. New topics start at 50 percent. That is maximum uncertainty, and the bandit treats it as an invitation.
 
-Each problem gets a context vector with five features. The mastery gap on its weakest topic. The mean gap across its topics. Difficulty match. Days since those topics were last touched. A bias term. Difficulty match is the auto adjustment. Below 40 percent mastery it scores Easy problems higher. Above 70 percent it reaches for Hard ones.
+Each problem gets a context vector with five features. The mastery gap on its weakest topic. The mean gap across its topics. Difficulty match. Days since those topics were last touched. A bias term. Difficulty match is the auto-adjustment. Below 40 percent mastery it scores Easy problems higher. Above 70 percent it reaches for Hard ones.
 
 The bandit is Thompson sampling over a linear model of expected learning gain. It samples one theta from the Gaussian posterior and takes the argmax. The reward for an attempt is the mastery gain in the problem's weakest topic, clipped to [-1, 1]. Solving grows mastery, so the reward is positive. Failing shrinks it, so the reward is negative. The bandit learns which contexts produce learning, not just which problems get solved. There is no epsilon to tune.
 
