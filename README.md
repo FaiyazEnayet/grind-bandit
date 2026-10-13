@@ -7,7 +7,7 @@
 
 Your LeetCode grind as a contextual bandit.
 
-Did you used to grind problems at random?. Arrays on Monday, whatever felt easy on Tuesday. Does your DP stay bad for months? This is built for finding your next problem for you. It explores weak topics and exploits what is almost mastered. Bayes handles that tradeoff, not vibes.
+Did you used to grind problems at random? Arrays on Monday, whatever felt easy on Tuesday. Does your DP stay bad for months? This is built for finding your next problem for you. It explores weak topics and exploits what is almost mastered. Bayes handles that tradeoff, not vibes.
 
 ## Live interactive demo
 
