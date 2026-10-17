@@ -1,17 +1,18 @@
-<p align="center"><img src="docs/readme-banner.svg" alt="Grind-Bandit: Practice recommendations with visible uncertainty" width="1200"></p>
+<p align="center"><img src="docs/readme-banner.svg?v=type-20261017b" alt="Grind-Bandit: Practice recommendations with visible uncertainty" width="1200"></p>
 
 [![Tests](https://github.com/FaiyazEnayet/grind-bandit/actions/workflows/ci.yml/badge.svg)](https://github.com/FaiyazEnayet/grind-bandit/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/license-MIT-007EC6)](LICENSE) ![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB) ![Built with NumPy + contextual bandits](https://img.shields.io/badge/built%20with-NumPy%20%2B%20contextual%20bandits-555555) [![Interactive demo](https://img.shields.io/badge/demo-interactive-4C9D39)](https://faiyazenayet.github.io/grind-bandit/docs/dashboard.html)
 
-<p align="center"><a href="https://faiyazenayet.github.io/grind-bandit/docs/dashboard.html"><b>Open interactive demo</b></a> · <a href="docs/dashboard.html">HTML file</a> · <a href="#method">Method</a> · <a href="#run-locally">Run locally</a> · <a href="#limitations">Limitations</a></p>
+<p align="center"><a href="https://faiyazenayet.github.io/grind-bandit/docs/dashboard.html"><b>Open interactive demo</b></a> · <a href="#method">Method</a> · <a href="#run-locally">Run locally</a></p>
 
 # Grind-Bandit
 
 Grind-Bandit recommends programming practice from logged attempts. It models topic mastery and forgetting, then explains why a particular problem is a useful next step.
 
-**Python · contextual bandits · learning-state models**
 
-[![Grind-Bandit demo](docs/demo.gif?v=data-20261017)](https://faiyazenayet.github.io/grind-bandit/docs/dashboard.html)
+[![Grind-Bandit demo](docs/demo.gif?v=showcase-20261017b)](https://faiyazenayet.github.io/grind-bandit/docs/dashboard.html)
 
+
+A practice recommendation should explain both its opportunity and its uncertainty. Compare topic estimates with recent attempts and the projected cost of waiting before choosing the next problem. Solving and failing update the learning model differently, so the recommendation is a revisable hypothesis about useful practice rather than a fixed judgment of ability.
 
 ## Explore
 
