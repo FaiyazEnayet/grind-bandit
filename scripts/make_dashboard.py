@@ -319,9 +319,19 @@ file, so the page works offline with no backend.
 
 def main() -> None:
     OUT.parent.mkdir(parents=True, exist_ok=True)
-    OUT.write_text(build())
+    OUT.write_text(_portfolio_html(build()), encoding="utf-8")
     print(f"wrote {OUT} ({OUT.stat().st_size / 1e6:.1f} MB)")
 
+
+
+def _portfolio_html(raw):
+    """Presentation-only transform of this run’s freshly calculated figures."""
+    import sys
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[1]
+    sys.path.insert(0, str(root / "portfolio_ui"))
+    from renderer import render_html
+    return render_html(root, 'grind-bandit', raw)[0]
 
 if __name__ == "__main__":
     main()
