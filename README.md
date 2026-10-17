@@ -10,7 +10,7 @@ Grind-Bandit recommends programming practice from logged attempts. It models top
 
 **Python · contextual bandits · learning-state models**
 
-[![Grind-Bandit demo](docs/demo.gif)](https://faiyazenayet.github.io/grind-bandit/docs/dashboard.html)
+[![Grind-Bandit demo](docs/demo.gif?v=data-20261017)](https://faiyazenayet.github.io/grind-bandit/docs/dashboard.html)
 
 
 ## Explore
