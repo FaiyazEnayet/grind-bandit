@@ -32,6 +32,10 @@ Attempt history updates topic estimates and the bandit state. Recommendations co
 | Dashboard history | 30 scripted attempts with seed 42 |
 | Interpretation | A reproducible demonstration, not a measured learning-outcomes trial |
 
+## Updating this project
+
+Dashboard source language: **Python**. Generator: `scripts/make_dashboard.py`. To keep the interactive page, figures, data animation, and README consistent, follow [the coding-agent update guide](AGENT-DASHBOARD-GUIDE.md). The local interactive output is `docs/dashboard.html`.
+
 ## Run locally
 
 
