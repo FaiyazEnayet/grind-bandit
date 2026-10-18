@@ -141,6 +141,7 @@ def cmd_review(args) -> None:
         return
     now = _now()
     weeks = args.weeks
+    hl = mastery.half_life_days(state)
     print(f"Weekly review: last {weeks} week(s)")
     for w in range(weeks):
         end = now - w * 7 * 86400.0
@@ -153,8 +154,8 @@ def cmd_review(args) -> None:
         solved = sum(1 for e in entries if e["solved"])
         minutes = sum(e["minutes"] for e in entries)
         print(f"\nweek ending {label}: {n} attempts, {solved} solved ({solved / n:.0%}), {minutes} min")
-        before = mastery.replay(log, start)
-        after = mastery.replay(log, end)
+        before = mastery.replay(log, start, hl)
+        after = mastery.replay(log, end, hl)
         deltas = {
             t: after.get(t, 0.5) - before.get(t, 0.5)
             for t in set(after) | set(before)
