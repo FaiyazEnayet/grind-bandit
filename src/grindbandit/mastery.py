@@ -5,11 +5,12 @@ mean alpha / (alpha + beta). A solved attempt adds one win to every topic
 on the problem, a failed attempt adds one loss. New topics start at
 alpha = beta = 1, which is a mastery of 50 percent: maximum uncertainty.
 
-Forgetting: on read, the stored counts decay exponentially toward the
-(1, 1) prior based on time since the topic was last attempted. The
-half-life defaults to 30 days and is configurable via
-state["config"]["half_life_days"]. Decay is applied on read only; the
-stored counts are never mutated, so the raw evidence stays intact.
+Forgetting: the stored counts decay exponentially toward the (1, 1)
+prior based on time since the topic was last attempted. The half-life
+defaults to 30 days and is configurable via state["config"]["half_life_days"].
+Decay is persisted on every update (before the new observation is added),
+so a new attempt can never revive long-forgotten evidence. The raw
+attempt history stays intact in the append-only log for honest replay.
 """
 
 from __future__ import annotations
@@ -57,6 +58,12 @@ def mastery_map(state: dict, now: float | None = None) -> dict[str, float]:
 def update(state: dict, topics: list[str], solved: bool, now: float) -> None:
     for name in topics:
         t = _topic(state, name)
+        # Persist decay up to `now` BEFORE adding the new observation.
+        # Adding to undecayed counts would resurrect long-forgotten
+        # evidence: e.g. ten successes, 90 idle days, then one failure
+        # must lower mastery, not raise it back toward the old successes.
+        a, b = decayed_counts(state, name, now)
+        t["alpha"], t["beta"] = a, b
         if solved:
             t["alpha"] += 1.0
             t["solved"] += 1
@@ -66,15 +73,20 @@ def update(state: dict, topics: list[str], solved: bool, now: float) -> None:
         t["last_ts"] = now
 
 
-def replay(entries: list[dict], upto_ts: float) -> dict[str, float]:
+def replay(entries: list[dict], upto_ts: float,
+           half_life_days: float | None = None) -> dict[str, float]:
     """Rebuild per-topic mastery from the attempt log up to a timestamp.
 
     This powers the weekly review: replaying the log gives an honest
     picture of what mastery looked like at any point in the past.
     Forgetting is applied as of upto_ts, so a topic untouched for weeks
-    before that point shows decayed, not frozen, mastery.
+    before that point shows decayed, not frozen, mastery. Pass the
+    configured half-life so the reconstruction matches live mastery;
+    the default 30 days applies when omitted.
     """
     fake: dict = {}
+    if half_life_days is not None:
+        fake["config"] = {"half_life_days": half_life_days}
     for e in entries:
         if e["ts"] <= upto_ts:
             update(fake, e["topics"], e["solved"], e["ts"])
