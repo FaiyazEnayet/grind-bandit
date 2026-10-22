@@ -68,9 +68,15 @@ The committed demonstration scripts a learner with different success tendencies 
 
 A high topic estimate is a model belief informed by the logged history. The displayed solve rate is an observed fraction within the demonstration. They should not be equated, and uncertainty matters most during cold start and in sparsely attempted topics.
 
+## Recommendation log and delayed quizzes
+
+Every `next` pick is appended to the state file as a full recommendation record: the feature version (`context-v1`), the RNG seed behind the Thompson draw, the posterior and per-topic snapshot, and every candidate with its context vector and an estimated selection probability. The probabilities are Monte Carlo estimates from the model posterior (10,000 resamples on a separate RNG stream, add-one smoothed): they say how likely the model was to pick each problem, nothing more. Because the record is self-contained, any past pick can be replayed from its logged state and checked against what was actually recommended.
+
+Logging an attempt also schedules a delayed transfer quiz: a different problem on the attempt's weakest topic, due three days later. Record its outcome with `grind-bandit quiz <id> solved|failed` (pending quizzes are listed by `stats`). Delayed outcomes are stored in their own part of the state file, separate from attempts and from the model-derived reward on each attempt (the change in modeled mastery, labeled `model_derived_mastery_change`). They never update mastery, the bandit posterior, or any reward. They are observational records, useful for later comparison, and are not causal evidence that a recommendation improved learning.
+
 ## Code and data
 
-`src/grindbandit/bandit.py` owns recommendations. `mastery.py` handles learning and forgetting estimates. `state.py` stores attempts. The source problem bank and dashboard scripts remain inspectable.
+`src/grindbandit/bandit.py` owns recommendations. `mastery.py` handles learning and forgetting estimates. `state.py` stores attempts, recommendation records, and delayed quiz outcomes. The source problem bank and dashboard scripts remain inspectable.
 
 
 ## Limitations

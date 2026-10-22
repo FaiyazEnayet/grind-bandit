@@ -1,10 +1,11 @@
-"""Command line interface: next, log, stats, review, export, reset."""
+"""Command line interface: next, log, quiz, stats, review, export, reset."""
 
 from __future__ import annotations
 
 import argparse
 import csv
 import json
+import secrets
 import sys
 import time
 from datetime import datetime, timezone
@@ -48,12 +49,16 @@ def cmd_next(args) -> None:
     bank = problems.load()
     now = _now()
     cands, review_mode = select_candidates(bank, state, now)
-    theta = bandit.sample_theta(state, seed=args.seed)
-    scored = sorted(
-        ((bandit.score(theta, bandit.context(p, state, now)), p["id"], p) for p in cands),
-        key=lambda t: (-t[0], t[1]),
+    # Record the seed that drives the draw. When the user does not pass
+    # one, generate it here so the logged recommendation still carries
+    # the exact seed and can be reconstructed later.
+    seed = args.seed if args.seed is not None else secrets.randbits(63)
+    record = bandit.build_recommendation(
+        state, cands, now, seed=seed, review_mode=review_mode
     )
-    _, _, p = scored[0]
+    st.append_recommendation(state, record)
+    st.save(state)
+    p = problems.by_id(bank, record["selected_problem_id"])
     print(f"#{p['id']} {p['title']} ({p['difficulty']})")
     print(problems.url(p))
     print(f"Topics: {', '.join(p['topics'])}")
@@ -81,10 +86,36 @@ def cmd_log(args) -> None:
     after = mastery.mean(state, weak, now)
     reward = max(-1.0, min(1.0, after - before))
     bandit.observe(state, x, reward)
-    st.record_attempt(state, p, solved, args.minutes, reward, now)
+    rec_id = st.latest_recommendation_id(state, p["id"])
+    st.record_attempt(state, p, solved, args.minutes, reward, now,
+                      recommendation_id=rec_id)
+    quiz = st.schedule_delayed_quiz(state, bank, p, weak, now,
+                                    recommendation_id=rec_id)
     st.save(state)
     print(f"logged #{p['id']} {p['title']}: {args.result} ({args.minutes} min)")
-    print(f"reward, defined as mastery gain in {weak}: {reward:+.3f}")
+    print(f"model-derived reward: {reward:+.3f} (change in modeled mastery "
+          f"of {weak}; computed by the model, not a measured learning gain)")
+    if quiz is not None:
+        due = datetime.fromtimestamp(quiz["due_ts"], tz=timezone.utc).strftime("%Y-%m-%d")
+        print(f"delayed transfer quiz scheduled for {due}: "
+              f"#{quiz['quiz_problem_id']} {quiz['quiz_title']} ({weak}). "
+              f"Its outcome is recorded separately and never feeds the model.")
+
+
+def cmd_quiz(args) -> None:
+    state = st.load()
+    quiz = st.find_delayed_quiz(state, args.quiz_id)
+    if quiz is None:
+        print(f"unknown quiz id: {args.quiz_id}", file=sys.stderr)
+        raise SystemExit(1)
+    if quiz["status"] != "pending":
+        print(f"quiz {args.quiz_id} already has a recorded outcome", file=sys.stderr)
+        raise SystemExit(1)
+    st.record_delayed_outcome(state, args.quiz_id, args.result == "solved", _now())
+    st.save(state)
+    print(f"recorded delayed quiz {args.quiz_id}: {args.result}")
+    print("stored as an observational outcome only: it does not change "
+          "mastery, the bandit posterior, or any reward")
 
 
 def _heatmap(state: dict, bank: list[dict], now: float) -> list[str]:
@@ -131,6 +162,17 @@ def cmd_stats(args) -> None:
         rate = info["solved"] / info["attempts"] if info["attempts"] else 0.0
         bar = "\u2588" * int(m * 10) + "\u2591" * (10 - int(m * 10))
         print(f"{t:<18}{bar} {m:<4.0%}{info['attempts']:<8}{rate:<9.0%}{ago}")
+    pending = st.pending_delayed_quizzes(state)
+    if pending:
+        print()
+        print("Delayed transfer quizzes pending (outcomes are observational "
+              "and kept separate from the model):")
+        for q in sorted(pending, key=lambda q: q["due_ts"]):
+            due = datetime.fromtimestamp(q["due_ts"], tz=timezone.utc).strftime("%Y-%m-%d")
+            tag = "due now" if q["due_ts"] <= now else f"due {due}"
+            print(f"  {q['id']}: #{q['quiz_problem_id']} {q['quiz_title']} "
+                  f"({q['topic']}, {tag})")
+            print(f"    record with: grind-bandit quiz {q['id']} solved|failed")
 
 
 def cmd_review(args) -> None:
@@ -197,7 +239,8 @@ def cmd_reset(args) -> None:
         if ans.strip().lower() not in ("y", "yes"):
             print("aborted")
             return
-    st.save({"topics": {}, "problems": {}, "log": [], "bandit": {}})
+    st.save({"topics": {}, "problems": {}, "log": [], "bandit": {},
+             "recommendations": [], "delayed_quizzes": []})
     print("progress wiped")
 
 
@@ -215,6 +258,11 @@ def build_parser() -> argparse.ArgumentParser:
     lg.add_argument("result", choices=["solved", "failed"])
     lg.add_argument("--minutes", type=int, default=30)
     lg.set_defaults(func=cmd_log)
+
+    qz = sub.add_parser("quiz", help="record the outcome of a delayed transfer quiz")
+    qz.add_argument("quiz_id")
+    qz.add_argument("result", choices=["solved", "failed"])
+    qz.set_defaults(func=cmd_quiz)
 
     st_ = sub.add_parser("stats", help="mastery dashboard")
     st_.set_defaults(func=cmd_stats)
