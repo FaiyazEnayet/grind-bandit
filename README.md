@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://faiyazenayet.github.io/grind-bandit/docs/dashboard.html"><img src="https://img.shields.io/badge/Open-Dashboard-d6b475?style=for-the-badge&labelColor=151416" alt="Open Dashboard"></a>
+  <a href="https://faiyazenayet.github.io/grind-bandit/docs/dashboard.html"><img src="https://img.shields.io/badge/Open-Dashboard-f4edda?style=for-the-badge&labelColor=151416" alt="Open Dashboard"></a>
   <a href="#method"><img src="https://img.shields.io/badge/Explore-Method-4d4248?style=for-the-badge&labelColor=151416" alt="Explore Method"></a>
   <a href="#run-locally"><img src="https://img.shields.io/badge/Run-Locally-211e21?style=for-the-badge&labelColor=151416" alt="Run Locally"></a>
 </p>
