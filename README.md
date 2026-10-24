@@ -1,15 +1,24 @@
 <p align="center"><img src="docs/readme-banner.svg?v=type-20261017b" alt="Grind-Bandit: Practice recommendations with visible uncertainty" width="1200"></p>
 
-[![Tests](https://github.com/FaiyazEnayet/grind-bandit/actions/workflows/ci.yml/badge.svg)](https://github.com/FaiyazEnayet/grind-bandit/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/license-MIT-007EC6)](LICENSE) ![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB) ![Built with NumPy + contextual bandits](https://img.shields.io/badge/built%20with-NumPy%20%2B%20contextual%20bandits-555555) [![Interactive demo](https://img.shields.io/badge/demo-interactive-4C9D39)](https://faiyazenayet.github.io/grind-bandit/docs/dashboard.html)
+<h1 align="center">Grind-Bandit</h1>
 
-<p align="center"><a href="https://faiyazenayet.github.io/grind-bandit/docs/dashboard.html"><b>Open interactive demo</b></a> · <a href="#method">Method</a> · <a href="#run-locally">Run locally</a></p>
+<p align="center">
+  <a href="https://github.com/FaiyazEnayet/grind-bandit/actions/workflows/ci.yml"><img src="https://github.com/FaiyazEnayet/grind-bandit/actions/workflows/ci.yml/badge.svg?label=CI&labelColor=24292f" alt="CI"></a>
+  <img src="https://img.shields.io/badge/license-MIT-d6b475?labelColor=24292f" alt="License: MIT">
+  <img src="https://img.shields.io/badge/Python-3.10%2B-3776AB?labelColor=24292f" alt="Python 3.10+">
+  <img src="https://img.shields.io/badge/built%20with-NumPy%20%2B%20contextual%20bandits-013243?labelColor=24292f" alt="Built with NumPy + contextual bandits">
+</p>
 
-# Grind-Bandit
+<p align="center">
+  <a href="https://faiyazenayet.github.io/grind-bandit/docs/dashboard.html"><img src="https://img.shields.io/badge/Open-Dashboard-d6b475?style=for-the-badge&labelColor=151416" alt="Open Dashboard"></a>
+  <a href="#method"><img src="https://img.shields.io/badge/Explore-Method-4d4248?style=for-the-badge&labelColor=151416" alt="Explore Method"></a>
+  <a href="#run-locally"><img src="https://img.shields.io/badge/Run-Locally-211e21?style=for-the-badge&labelColor=151416" alt="Run Locally"></a>
+</p>
 
 Grind-Bandit recommends programming practice from logged attempts. It models topic mastery and forgetting, then explains why a particular problem is a useful next step.
 
 
-[![Grind-Bandit demo](docs/demo.gif?v=showcase-20261017b)](https://faiyazenayet.github.io/grind-bandit/docs/dashboard.html)
+<p align="center"><a href="https://faiyazenayet.github.io/grind-bandit/docs/dashboard.html"><img src="docs/demo.gif?v=showcase-20261017b" alt="Grind-Bandit demo"></a></p>
 
 
 A practice recommendation should explain both its opportunity and its uncertainty. Compare topic estimates with recent attempts and the projected cost of waiting before choosing the next problem. Solving and failing update the learning model differently, so the recommendation is a revisable hypothesis about useful practice rather than a fixed judgment of ability.
