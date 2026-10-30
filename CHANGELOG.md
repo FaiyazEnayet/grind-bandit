@@ -1,6 +1,8 @@
 # Changelog
 
 ## [Unreleased]
+
+## [v1.2.0] - 2026-10-30
 ### Docs
 - Centered the README header: uniform dark badge labels and three action buttons in the dashboard palette (Open Dashboard, Explore Method, Run Locally).
 
