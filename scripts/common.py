@@ -65,4 +65,4 @@ def recommend(state: dict, seed: int | None = None, now: float | None = None):
         key=lambda t: (-t[0], t[1]),
     )
     _, _, p = scored[0]
-    return p, bandit.explain(p, state, now), review_mode
+    return p, bandit.explain(p, state, now, theta), review_mode
