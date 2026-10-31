@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Fixed
+- Recommendation explanations now match the actual sampled draw (`src/grindbandit/bandit.py`). The old explanation derived its driver claim from the posterior mean while selection used a sampled theta, so it could credit a factor that did not drive the realized draw. The logged recommendation record now carries a sampled explanation: per-feature sampled contributions that sum with the intercept to the logged sampled score, the driver equal to the largest sampled contribution, and score uncertainty from 10,000 posterior resamples with the seed recorded. Picks made while the posterior score spread is still wide are labeled exploration, and uncertainty is reported as a model estimate, never as observed proficiency. The `next` command prints the logged explanation lines, and the demo-data helper passes its sampled theta to the explanation instead of recomputing from the mean.
+
 ## [v1.2.0] - 2026-10-30
 ### Docs
 - Centered the README header: uniform dark badge labels and three action buttons in the dashboard palette (Open Dashboard, Explore Method, Run Locally).

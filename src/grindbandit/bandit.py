@@ -49,6 +49,18 @@ FEATURE_VERSION = "context-v1"
 # Monte Carlo draws used to estimate per-candidate selection probabilities.
 PROBABILITY_SAMPLES = 10_000
 
+# Posterior draws used to report the uncertainty of an explanation's
+# sampled score. At least 1,000 by contract; 10,000 matches the
+# selection-probability estimates and keeps the reported spread stable.
+EXPLANATION_UNCERTAINTY_SAMPLES = 10_000
+
+# A pick counts as exploration while the posterior standard deviation of
+# its sampled score is at least this many reward units. Rewards are
+# clipped to [-1, 1], so 0.5 means the model cannot place the expected
+# gain within half the reward range: the draw, not learned differences,
+# is doing most of the deciding.
+EXPLORATION_SCORE_SD = 0.5
+
 LAMBDA = 1.0    # prior precision: how skeptical we start
 SIGMA2 = 0.1    # assumed reward noise variance
 RECENCY_CAP_DAYS = 30.0
@@ -173,6 +185,10 @@ def build_recommendation(
     scores = [score(theta, x) for x in contexts]
     winner = min(range(len(ordered)), key=lambda i: (-scores[i], ordered[i]["id"]))
     mean, prec = get_posterior(state)
+    explanation_seed = (int(seed) + 2) % (2**63)
+    explanation = explain_sampled(
+        ordered[winner], state, now, theta, uncertainty_seed=explanation_seed
+    )
 
     topic_names = sorted({t for p in ordered for t in p["topics"]})
     topics_snapshot = {}
@@ -210,11 +226,13 @@ def build_recommendation(
                 "topics": list(p["topics"]),
                 "context": [float(v) for v in x],
                 "estimated_selection_probability": probs[i],
+                "sampled_score": scores[i],
                 "selected": i == winner,
             }
             for i, (p, x) in enumerate(zip(ordered, contexts))
         ],
         "selected_problem_id": ordered[winner]["id"],
+        "explanation": explanation,
     }
 
 
@@ -244,15 +262,58 @@ def replay_selection(record: dict) -> int:
     return best_id
 
 
-def explain(problem: dict, state: dict, now: float) -> list[str]:
-    """Human readable reasons, from the posterior mean (deterministic)."""
+def explain_sampled(
+    problem: dict,
+    state: dict,
+    now: float,
+    theta: np.ndarray,
+    uncertainty_seed: int = 0,
+    uncertainty_samples: int = EXPLANATION_UNCERTAINTY_SAMPLES,
+) -> dict:
+    """Explain a pick from the sampled theta that actually drove it.
+
+    The driver is the feature with the largest sampled contribution
+    theta_i * x_i for this draw, never a posterior-mean ranking, so the
+    explanation cannot credit a factor that did not drive the realized
+    draw. Contributions plus the intercept sum exactly to the sampled
+    score. Uncertainty comes from resampling the posterior (seed
+    recorded) and is reported as a model estimate, never as observed
+    proficiency. A pick is labeled exploration while the posterior
+    standard deviation of its sampled score is at least
+    EXPLORATION_SCORE_SD, meaning the draw rather than learned
+    differences did most of the deciding.
+    """
     from . import mastery as mst
 
+    theta = np.asarray(theta, dtype=float)
     x = context(problem, state, now)
-    mean, _ = get_posterior(state)
+    contributions = {
+        name: float(theta[i] * x[i]) for i, name in enumerate(FEATURES[:4])
+    }
+    intercept = float(theta[4] * x[4])
+    sampled = float(theta @ x)
+    driver = FEATURES[int(np.argmax(theta[:4] * x[:4]))]
+
+    mean, prec = get_posterior(state)
+    cov = np.linalg.inv(prec)
+    rng = np.random.default_rng(uncertainty_seed)
+    thetas = rng.multivariate_normal(mean, cov, size=uncertainty_samples)
+    scores = thetas @ x
+    sd = float(scores.std())
+    uncertainty = {
+        "method": "posterior_resampling",
+        "samples": int(uncertainty_samples),
+        "seed": int(uncertainty_seed),
+        "score_mean": float(scores.mean()),
+        "score_sd": sd,
+        "score_p10": float(np.percentile(scores, 10)),
+        "score_p90": float(np.percentile(scores, 90)),
+    }
+    exploration = sd >= EXPLORATION_SCORE_SD
+
     tm = {t: mst.mean(state, t, now) for t in problem["topics"]}
     weak = weakest_topic(problem, tm)
-    lines = [f"weakest topic here: {weak} (mastery {tm[weak]:.0%})"]
+    lines = [f"weakest topic here: {weak} (modeled mastery {tm[weak]:.0%})"]
 
     lasts = [state.get("topics", {}).get(t, {}).get("last_ts") for t in problem["topics"]]
     if all(last is None for last in lasts):
@@ -261,12 +322,50 @@ def explain(problem: dict, state: dict, now: float) -> list[str]:
         days = min((now - last) / 86400.0 for last in lasts if last is not None)
         lines.append(f"last touched {int(days)} days ago" if days >= 1 else "practiced today")
 
-    driver = int(np.argmax(mean[:4] * x[:4]))
     names = {
-        0: "attacking your biggest gap",
-        1: "broad room to grow across these topics",
-        2: f"difficulty {problem['difficulty']} fits your level",
-        3: "spaced repetition: this topic is getting stale",
+        "gap_min": "attacking your biggest gap",
+        "gap_mean": "broad room to grow across these topics",
+        "difficulty_match": f"difficulty {problem['difficulty']} fits your level",
+        "recency": "spaced repetition: this topic is getting stale",
     }
     lines.append(names[driver])
-    return lines
+    if exploration:
+        lines.append(
+            "exploration: the model is still uncertain here, so this pick "
+            "tests a weakly evidenced option"
+        )
+    lines.append(
+        f"model uncertainty in this score: sd {sd:.2f} "
+        f"(10th to 90th percentile {uncertainty['score_p10']:.2f} to "
+        f"{uncertainty['score_p90']:.2f}); a model estimate, not a measured result"
+    )
+    return {
+        "sampled_score": sampled,
+        "contributions": contributions,
+        "intercept": intercept,
+        "driver": driver,
+        "driver_contribution": contributions[driver],
+        "exploration": exploration,
+        "uncertainty": uncertainty,
+        "lines": lines,
+    }
+
+
+def explain(
+    problem: dict,
+    state: dict,
+    now: float,
+    theta: np.ndarray,
+    uncertainty_seed: int = 0,
+    uncertainty_samples: int = EXPLANATION_UNCERTAINTY_SAMPLES,
+) -> list[str]:
+    """Human readable reasons, from the sampled theta that drove the pick.
+
+    theta is required: deriving reasons from the posterior mean could
+    credit a factor that did not drive the realized draw. Callers that
+    hold the recommendation record should print the record's
+    explanation lines instead, so the shown text is exactly the logged one.
+    """
+    return explain_sampled(
+        problem, state, now, theta, uncertainty_seed, uncertainty_samples
+    )["lines"]

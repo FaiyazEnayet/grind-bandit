@@ -80,7 +80,8 @@ def test_posterior_learns_gap_weight_from_rewards():
 def test_explain_mentions_weakest_topic():
     s = {}
     mastery.update(s, ["dp"], False, 0.0)
-    lines = bandit.explain(_problem(["dp", "array"]), s, 1000.0)
+    theta = bandit.sample_theta(s, seed=0)
+    lines = bandit.explain(_problem(["dp", "array"]), s, 1000.0, theta)
     assert any("dp" in line for line in lines)
 
 

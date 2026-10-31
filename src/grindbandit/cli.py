@@ -65,7 +65,7 @@ def cmd_next(args) -> None:
     if review_mode:
         print("Note: you solved every problem in the bank. Review mode: pick anything.")
     print("Why this one:")
-    for line in bandit.explain(p, state, now):
+    for line in record["explanation"]["lines"]:
         print(f"  * {line}")
 
 
