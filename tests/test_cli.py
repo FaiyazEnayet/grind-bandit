@@ -45,7 +45,11 @@ def test_next_is_deterministic_with_seed(iso_state, capsys):
     assert first == second
 
 
-def test_all_solved_falls_back_to_review_mode(iso_state, capsys, monkeypatch):
+def test_all_solved_long_ago_resurfaces_as_due_review(iso_state, capsys, monkeypatch):
+    # Everything solved long ago: under the eligibility policy every
+    # problem is a due review (GB8), so next serves a review pick and
+    # says so. The old behavior silently fell back to the full bank and
+    # called it review mode; the resurfacing is now the policy itself.
     bank = problems.load()
     s = st.load()
     for p in bank:
@@ -55,7 +59,7 @@ def test_all_solved_falls_back_to_review_mode(iso_state, capsys, monkeypatch):
     st.save(s)
     cli.main(["next", "--seed", "0"])
     out = capsys.readouterr().out
-    assert "Review mode" in out
+    assert "review interval has elapsed" in out
 
 
 def test_stats_runs(iso_state, capsys):

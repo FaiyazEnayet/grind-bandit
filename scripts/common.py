@@ -54,11 +54,17 @@ def build_demo_state(seed: int = 42) -> dict:
 
 
 def recommend(state: dict, seed: int | None = None, now: float | None = None):
-    """Next-problem pick with real Thompson sampling. Mirrors cli.cmd_next."""
+    """Next-problem pick with real Thompson sampling. Mirrors cli.cmd_next.
+
+    Uses the same eligibility policy as the CLI. When no problem is
+    eligible, returns (None, [], False) instead of fabricating a pick.
+    """
     from grindbandit import cli
 
     now = time.time() if now is None else now
     cands, review_mode = cli.select_candidates(BANK, state, now)
+    if not cands:
+        return None, [], False
     theta = bandit.sample_theta(state, seed=seed)
     scored = sorted(
         ((bandit.score(theta, bandit.context(p, state, now)), p["id"], p) for p in cands),
