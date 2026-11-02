@@ -23,25 +23,86 @@ def _topic_last(state: dict, topic: str):
     return state.get("topics", {}).get(topic, {}).get("last_ts")
 
 
-def select_candidates(bank: list[dict], state: dict, now: float):
-    """Unsolved problems not attempted in the last day.
+# Minimum time between two attempts on the same problem, solved or not.
+ATTEMPT_COOLDOWN_SECONDS = 86400.0
 
-    Returns (candidates, review_mode). When everything is solved we fall
-    back to the full bank and say so honestly: that is review mode.
+
+def assess_eligibility(bank: list[dict], state: dict, now: float) -> list[dict]:
+    """Classify every problem in the bank under the eligibility policy.
+
+    Returns one entry per problem, in bank order, with keys
+    problem_id, eligible, class and reason. Two classes are eligible:
+
+    - new_practice: not solved yet, and not attempted within the
+      one-day attempt cooldown.
+    - due_review: solved before, and the review interval
+      (bandit.review_interval_days, default 7 days) has elapsed since
+      the last attempt. Solved problems resurface on this schedule
+      instead of never returning. The interval is a configurable
+      heuristic starting point, not a validated optimum.
+
+    The other two classes are not eligible: cooldown_new_practice
+    (unsolved but attempted within the cooldown) and review_cooldown
+    (solved, but the cooldown or the review interval has not elapsed;
+    the reason names the gate that binds). Every problem gets a reason,
+    and the whole assessment is a pure function of (bank, state, now),
+    so the reasons are deterministic.
     """
     probs = state.get("problems", {})
-    cands = []
+    interval = bandit.review_interval_days(state)
+    cooldown_days = ATTEMPT_COOLDOWN_SECONDS / 86400.0
+    entries = []
     for p in bank:
         rec = probs.get(str(p["id"]), {})
-        if rec.get("ever_solved"):
-            continue
         last = rec.get("last_ts")
-        if last is not None and now - last < 86400.0:
-            continue
-        cands.append(p)
-    if not cands:
-        return bank, True
-    return cands, False
+        age = None if last is None else (now - last) / 86400.0
+        if rec.get("ever_solved"):
+            if age is not None and age < cooldown_days:
+                cls, ok = "review_cooldown", False
+                reason = (f"solved and attempted {age:.1f} days ago; the "
+                          f"{cooldown_days:g}-day attempt cooldown applies "
+                          f"before the {interval:g}-day review interval")
+            elif age is not None and age < interval:
+                cls, ok = "review_cooldown", False
+                reason = (f"solved {age:.1f} days ago; review comes due at "
+                          f"{interval:g} days since the last attempt")
+            elif age is None:
+                cls, ok = "due_review", True
+                reason = ("solved, with no attempt timestamp recorded; "
+                          "treated as due for review")
+            else:
+                cls, ok = "due_review", True
+                reason = (f"solved {age:.1f} days ago; the {interval:g}-day "
+                          f"review interval has elapsed, so it is due "
+                          f"for review")
+        elif age is not None and age < cooldown_days:
+            cls, ok = "cooldown_new_practice", False
+            reason = (f"attempted {age:.1f} days ago; {cooldown_days:g}-day "
+                      f"attempt cooldown")
+        else:
+            cls, ok = "new_practice", True
+            reason = ("never attempted" if age is None else
+                      f"last attempted {age:.1f} days ago; unsolved new "
+                      f"practice")
+        entries.append({"problem_id": p["id"], "eligible": ok,
+                        "class": cls, "reason": reason})
+    return entries
+
+
+def select_candidates(bank: list[dict], state: dict, now: float):
+    """Problems eligible under the eligibility policy, in bank order.
+
+    Returns (candidates, review_mode), where review_mode says whether
+    any candidate is a due review. The candidate set can be empty;
+    callers handle that explicitly instead of falling back to the full
+    bank, which would fabricate a pick and misreport an empty eligible
+    set as everything solved.
+    """
+    entries = assess_eligibility(bank, state, now)
+    by_id = {e["problem_id"]: e for e in entries}
+    cands = [p for p in bank if by_id[p["id"]]["eligible"]]
+    review_mode = any(by_id[p["id"]]["class"] == "due_review" for p in cands)
+    return cands, review_mode
 
 
 def cmd_next(args) -> None:
@@ -49,12 +110,27 @@ def cmd_next(args) -> None:
     bank = problems.load()
     now = _now()
     cands, review_mode = select_candidates(bank, state, now)
+    if not cands:
+        # Explicit empty-set response: every problem is inside its
+        # attempt cooldown or its review interval. No pick is made and
+        # no recommendation record is appended, so the log never
+        # carries a fabricated recommendation.
+        print("No problem is eligible right now: every problem was "
+              "attempted within the last day or solved within its "
+              "review interval. Nothing was logged.")
+        return
     # Record the seed that drives the draw. When the user does not pass
     # one, generate it here so the logged recommendation still carries
     # the exact seed and can be reconstructed later.
     seed = args.seed if args.seed is not None else secrets.randbits(63)
+    policy = {
+        "review_interval_days": bandit.review_interval_days(state),
+        "attempt_cooldown_days": ATTEMPT_COOLDOWN_SECONDS / 86400.0,
+        "feature_version": bandit.FEATURE_VERSION,
+        "eligibility": assess_eligibility(bank, state, now),
+    }
     record = bandit.build_recommendation(
-        state, cands, now, seed=seed, review_mode=review_mode
+        state, cands, now, seed=seed, review_mode=review_mode, policy=policy
     )
     st.append_recommendation(state, record)
     st.save(state)
@@ -63,7 +139,8 @@ def cmd_next(args) -> None:
     print(problems.url(p))
     print(f"Topics: {', '.join(p['topics'])}")
     if review_mode:
-        print("Note: you solved every problem in the bank. Review mode: pick anything.")
+        print("Note: this pick is a review. It was solved before and "
+              "its review interval has elapsed.")
     print("Why this one:")
     for line in record["explanation"]["lines"]:
         print(f"  * {line}")

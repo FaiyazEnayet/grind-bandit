@@ -15,8 +15,16 @@ Context features, all in [0, 1]:
                     user's mastery implies (see target_difficulty). This
                     is the difficulty auto adjustment: cross a mastery
                     threshold and harder problems start scoring higher.
-  recency:          days since the user last touched these topics, capped
-                    at 30. Never touched counts as 30.
+  recency:          days since the least recently practiced topic on
+                    the problem, capped at 30. A topic that has never
+                    been practiced counts as the full 30: an untouched
+                    topic is the stalest signal a problem can carry,
+                    so recency tracks the stalest topic, not the
+                    freshest one. (Under context-v1 this feature took
+                    the most recent practice across topics and ignored
+                    never-practiced topics entirely; context_v1 and
+                    replay_selection_v1 below preserve that layout so
+                    v1 records still replay.)
   bias:             constant 1, lets the model learn a global offset.
 
 Reward: the change in mastery of the problem's weakest topic caused by
@@ -44,7 +52,19 @@ D = len(FEATURES)
 # whenever FEATURES or context() changes, so recommendation records logged
 # under older layouts stay interpretable; a record replays only under the
 # version that produced it.
-FEATURE_VERSION = "context-v1"
+FEATURE_VERSION = "context-v2"
+
+# The previous layout. Its recency feature used the most recent practice
+# across a problem's topics and ignored never-practiced topics. Records
+# logged under it still replay through replay_selection_v1.
+FEATURE_VERSION_V1 = "context-v1"
+
+# Days after a solved problem's last attempt before it comes due for
+# spaced review (see cli.assess_eligibility). Configurable per state via
+# state["config"]["review_interval_days"]. This default is a starting
+# heuristic chosen for a daily practice habit, NOT a validated optimum:
+# no retention measurement has been fitted to it.
+REVIEW_INTERVAL_DAYS = 7.0
 
 # Monte Carlo draws used to estimate per-candidate selection probabilities.
 PROBABILITY_SAMPLES = 10_000
@@ -81,7 +101,13 @@ def weakest_topic(problem: dict, topic_mastery: dict) -> str:
     return min(problem["topics"], key=lambda t: topic_mastery.get(t, 0.5))
 
 
-def context(problem: dict, state: dict, now: float) -> np.ndarray:
+def review_interval_days(state: dict) -> float:
+    """Spaced-review interval in force for this state, in days."""
+    return float(state.get("config", {}).get("review_interval_days",
+                                              REVIEW_INTERVAL_DAYS))
+
+
+def _context(problem: dict, state: dict, now: float, version: str) -> np.ndarray:
     from . import mastery as mst
 
     tm = {t: mst.mean(state, t, now) for t in problem["topics"]}
@@ -91,12 +117,32 @@ def context(problem: dict, state: dict, now: float) -> np.ndarray:
     weak_m = min(ms)
     dmatch = 1.0 - abs(DIFFICULTY_NUM[problem["difficulty"]] - target_difficulty(weak_m))
     lasts = [state.get("topics", {}).get(t, {}).get("last_ts") for t in problem["topics"]]
-    if all(last is None for last in lasts):
-        recency = 1.0
+    if version == FEATURE_VERSION_V1:
+        # v1 semantics: days since the most recent practice across the
+        # problem's topics; never-practiced topics do not count at all.
+        if all(last is None for last in lasts):
+            recency = 1.0
+        else:
+            days = min((now - last) / 86400.0 for last in lasts if last is not None)
+            recency = min(max(days, 0.0), RECENCY_CAP_DAYS) / RECENCY_CAP_DAYS
     else:
-        days = min((now - last) / 86400.0 for last in lasts if last is not None)
+        # Current semantics: days since the least recently practiced
+        # topic; a never-practiced topic counts as the full cap.
+        days = max(
+            RECENCY_CAP_DAYS if last is None else (now - last) / 86400.0
+            for last in lasts
+        )
         recency = min(max(days, 0.0), RECENCY_CAP_DAYS) / RECENCY_CAP_DAYS
     return np.array([gap_min, gap_mean, dmatch, recency, 1.0])
+
+
+def context(problem: dict, state: dict, now: float) -> np.ndarray:
+    return _context(problem, state, now, FEATURE_VERSION)
+
+
+def context_v1(problem: dict, state: dict, now: float) -> np.ndarray:
+    """The context-v1 layout, preserved so v1 records stay interpretable."""
+    return _context(problem, state, now, FEATURE_VERSION_V1)
 
 
 def get_posterior(state: dict) -> tuple[np.ndarray, np.ndarray]:
@@ -163,6 +209,7 @@ def build_recommendation(
     seed: int,
     review_mode: bool = False,
     samples: int = PROBABILITY_SAMPLES,
+    policy: dict | None = None,
 ) -> dict:
     """Make a Thompson pick and return a self-contained log record for it.
 
@@ -171,7 +218,11 @@ def build_recommendation(
     snapshot, the per-topic snapshot, and every candidate's context
     vector. Selection probabilities are Monte Carlo estimates from the
     posterior, computed on a separate RNG stream so that estimating them
-    does not change the draw itself.
+    does not change the draw itself. When the caller passes the
+    eligibility policy it used (see cli.assess_eligibility), the record
+    also carries that policy verbatim and each candidate's eligibility
+    class and reason, so the logged eligible set can be checked against
+    the candidates the policy produced.
     """
     from . import mastery as mst
 
@@ -201,7 +252,7 @@ def build_recommendation(
             "mastery": mst.mean(state, t, now),
         }
 
-    return {
+    record = {
         "id": f"rec-{uuid.uuid4().hex[:12]}",
         "ts": now,
         "feature_version": FEATURE_VERSION,
@@ -234,19 +285,21 @@ def build_recommendation(
         "selected_problem_id": ordered[winner]["id"],
         "explanation": explanation,
     }
+    if policy is not None:
+        by_id = {e["problem_id"]: e for e in policy["eligibility"]}
+        for cand in record["candidates"]:
+            entry = by_id[cand["problem_id"]]
+            cand["eligibility_class"] = entry["class"]
+            cand["eligibility_reason"] = entry["reason"]
+        record["policy"] = policy
+    return record
 
 
-def replay_selection(record: dict) -> int:
-    """Reconstruct the selected problem id from a logged recommendation.
-
-    Uses only the record: the posterior snapshot, the candidate context
-    vectors, and the recorded seed. Mirrors the selection rule in
-    build_recommendation (highest sampled score, ties to the lowest id).
-    """
-    if record.get("feature_version") != FEATURE_VERSION:
+def _replay(record: dict, version: str) -> int:
+    if record.get("feature_version") != version:
         raise ValueError(
             f"record was logged under {record.get('feature_version')!r}, "
-            f"this code replays {FEATURE_VERSION!r}"
+            f"this path replays {version!r}"
         )
     snapshot = {"bandit": {"mean": record["posterior"]["mean"],
                            "prec": record["posterior"]["prec"]}}
@@ -260,6 +313,37 @@ def replay_selection(record: dict) -> int:
             best_key = key
             best_id = cand["problem_id"]
     return best_id
+
+
+def replay_selection(record: dict) -> int:
+    """Reconstruct the selected problem id from a logged recommendation.
+
+    Uses only the record: the posterior snapshot, the candidate context
+    vectors, and the recorded seed. Mirrors the selection rule in
+    build_recommendation (highest sampled score, ties to the lowest id).
+    Records logged under context-v1 dispatch to the preserved v1 path;
+    records from any other version are rejected.
+    """
+    version = record.get("feature_version")
+    if version == FEATURE_VERSION_V1:
+        return replay_selection_v1(record)
+    if version != FEATURE_VERSION:
+        raise ValueError(
+            f"record was logged under {version!r}, this code replays "
+            f"{FEATURE_VERSION!r} and {FEATURE_VERSION_V1!r}"
+        )
+    return _replay(record, FEATURE_VERSION)
+
+
+def replay_selection_v1(record: dict) -> int:
+    """Replay a context-v1 record under the preserved v1 semantics.
+
+    The selection rule is unchanged across versions; what v1 pins is
+    the context layout the logged candidate vectors were computed
+    under (see context_v1), which is why the record's feature version
+    gates this path.
+    """
+    return _replay(record, FEATURE_VERSION_V1)
 
 
 def explain_sampled(
