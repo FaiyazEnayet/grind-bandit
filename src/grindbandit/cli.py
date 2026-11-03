@@ -177,6 +177,11 @@ def cmd_log(args) -> None:
         print(f"delayed transfer quiz scheduled for {due}: "
               f"#{quiz['quiz_problem_id']} {quiz['quiz_title']} ({weak}). "
               f"Its outcome is recorded separately and never feeds the model.")
+        if quiz.get("assignment", {}).get("pool_exhausted"):
+            print(f"note: no unused problem remains on {weak} (every "
+                  f"alternative has been attempted or already assigned "
+                  f"as a quiz), so this quiz reuses "
+                  f"#{quiz['quiz_problem_id']}.")
 
 
 def cmd_quiz(args) -> None:
@@ -188,9 +193,28 @@ def cmd_quiz(args) -> None:
     if quiz["status"] != "pending":
         print(f"quiz {args.quiz_id} already has a recorded outcome", file=sys.stderr)
         raise SystemExit(1)
-    st.record_delayed_outcome(state, args.quiz_id, args.result == "solved", _now())
+    try:
+        done = st.record_delayed_outcome(
+            state, args.quiz_id, args.result == "solved", _now(),
+            allow_early=args.early,
+        )
+    except ValueError:
+        due = datetime.fromtimestamp(quiz["due_ts"], tz=timezone.utc).strftime("%Y-%m-%d")
+        print(f"quiz {args.quiz_id} is not due until {due}; an outcome "
+              f"recorded early does not measure retention after the "
+              f"delay. If the quiz was taken early on purpose, rerun "
+              f"with --early.", file=sys.stderr)
+        raise SystemExit(1)
     st.save(state)
     print(f"recorded delayed quiz {args.quiz_id}: {args.result}")
+    oc = done["outcome"]
+    timing_label = {"early": "early", "on_time": "on time", "late": "late"}[oc["timing"]]
+    if oc["delay_seconds"] is not None:
+        print(f"outcome timing: {timing_label} "
+              f"({oc['delay_seconds'] / 86400.0:.1f} days after the quiz "
+              f"was scheduled)")
+    else:
+        print(f"outcome timing: {timing_label}")
     print("stored as an observational outcome only: it does not change "
           "mastery, the bandit posterior, or any reward")
 
@@ -250,6 +274,27 @@ def cmd_stats(args) -> None:
             print(f"  {q['id']}: #{q['quiz_problem_id']} {q['quiz_title']} "
                   f"({q['topic']}, {tag})")
             print(f"    record with: grind-bandit quiz {q['id']} solved|failed")
+    completed = [q for q in state.get("delayed_quizzes", [])
+                 if q.get("status") == "completed"]
+    if completed:
+        print()
+        print("Delayed transfer quiz outcomes (observational, kept "
+              "separate from the model):")
+        for q in sorted(completed,
+                        key=lambda q: (q.get("outcome") or {}).get("recorded_ts") or 0):
+            oc = q.get("outcome") or {}
+            result = "solved" if oc.get("solved") else "failed"
+            timing = oc.get("timing")
+            if timing is None:
+                # Recorded before timing was tracked.
+                detail = "timing not recorded"
+            else:
+                detail = {"early": "early", "on_time": "on time",
+                          "late": "late"}[timing]
+                if oc.get("delay_seconds") is not None:
+                    detail += f", {oc['delay_seconds'] / 86400.0:.1f} days after scheduling"
+            print(f"  {q['id']}: #{q['quiz_problem_id']} {q['quiz_title']} "
+                  f"({q['topic']}, {result}, {detail})")
 
 
 def cmd_review(args) -> None:
@@ -339,6 +384,9 @@ def build_parser() -> argparse.ArgumentParser:
     qz = sub.add_parser("quiz", help="record the outcome of a delayed transfer quiz")
     qz.add_argument("quiz_id")
     qz.add_argument("result", choices=["solved", "failed"])
+    qz.add_argument("--early", action="store_true",
+                    help="record the outcome before the quiz is due "
+                         "(explicit override; the outcome is marked early)")
     qz.set_defaults(func=cmd_quiz)
 
     st_ = sub.add_parser("stats", help="mastery dashboard")

@@ -98,20 +98,54 @@ def latest_recommendation_id(state: dict, problem_id: int) -> str | None:
     return None
 
 
+def _assigned_quiz_problem_ids(state: dict) -> list:
+    """Problem ids assigned to earlier quizzes, in assignment order.
+
+    Together with the quiz records themselves this is the exposure
+    history: how many times a problem has been handed out as a quiz is
+    recoverable from the store, and each new record also carries its
+    own count (see schedule_delayed_quiz).
+    """
+    return [q.get("quiz_problem_id") for q in state.get("delayed_quizzes", [])]
+
+
+def _quiz_pool(bank: list[dict], attempted: dict, topic: str) -> list[dict]:
+    return [p for p in bank if topic in p["topics"] and p["id"] != attempted["id"]]
+
+
+def _is_novel(problem: dict, attempted_ids: set, assigned_ids: set) -> bool:
+    """A problem is novel as a quiz item if it was never attempted and
+    never assigned to an earlier quiz."""
+    return str(problem["id"]) not in attempted_ids and problem["id"] not in assigned_ids
+
+
 def choose_quiz_problem(
     bank: list[dict], attempted: dict, topic: str, state: dict
 ) -> dict | None:
     """Pick a different problem on the same topic for a delayed quiz.
 
-    Prefers problems with no recorded attempt; ties break to the lowest
-    id, so the choice is deterministic for a given bank and state.
+    Deterministic priority, lowest id inside each tier:
+
+    1. novel problems: never attempted and never assigned as a quiz;
+    2. assigned before but never attempted;
+    3. attempted before but never assigned;
+    4. attempted and assigned before.
+
+    A problem is therefore never assigned twice while a novel
+    alternative exists, and previously attempted problems are the last
+    resort. When only reused problems remain the pick is still made;
+    schedule_delayed_quiz states that exhaustion on the record.
     """
-    pool = [p for p in bank if topic in p["topics"] and p["id"] != attempted["id"]]
+    pool = _quiz_pool(bank, attempted, topic)
     if not pool:
         return None
     attempted_ids = set(state.get("problems", {}).keys())
-    fresh = [p for p in pool if str(p["id"]) not in attempted_ids]
-    return min(fresh or pool, key=lambda p: p["id"])
+    assigned_ids = {i for i in _assigned_quiz_problem_ids(state) if i is not None}
+
+    def tier(p: dict) -> tuple:
+        return (str(p["id"]) in attempted_ids, p["id"] in assigned_ids)
+
+    return min(pool, key=lambda p: (tier(p), p["id"]))
 
 
 def schedule_delayed_quiz(
@@ -132,6 +166,12 @@ def schedule_delayed_quiz(
     quiz_problem = choose_quiz_problem(bank, attempted, topic, state)
     if quiz_problem is None:
         return None
+    assigned_ids = _assigned_quiz_problem_ids(state)
+    attempted_ids = set(state.get("problems", {}).keys())
+    novel_pool = [
+        p for p in _quiz_pool(bank, attempted, topic)
+        if _is_novel(p, attempted_ids, set(assigned_ids))
+    ]
     quiz = {
         "id": f"quiz-{uuid.uuid4().hex[:12]}",
         "kind": "delayed_transfer_quiz",
@@ -143,6 +183,16 @@ def schedule_delayed_quiz(
         "source_recommendation_id": recommendation_id,
         "quiz_problem_id": quiz_problem["id"],
         "quiz_title": quiz_problem["title"],
+        # How this problem was chosen: whether it is novel (never
+        # attempted, never assigned), how many times it was assigned
+        # to earlier quizzes, and whether the novel pool was already
+        # exhausted, in which case this assignment is an explicit
+        # reuse rather than a silent repeat.
+        "assignment": {
+            "novel": _is_novel(quiz_problem, attempted_ids, set(assigned_ids)),
+            "prior_assignments": assigned_ids.count(quiz_problem["id"]),
+            "pool_exhausted": not novel_pool,
+        },
         "status": "pending",
         "outcome": None,
     }
@@ -158,19 +208,46 @@ def find_delayed_quiz(state: dict, quiz_id: str) -> dict | None:
 
 
 def record_delayed_outcome(
-    state: dict, quiz_id: str, solved: bool, now: float
+    state: dict, quiz_id: str, solved: bool, now: float, allow_early: bool = False
 ) -> dict | None:
     """Store a delayed quiz outcome in the quiz store only.
 
     Deliberately touches nothing else: the outcome is an observational
     record, kept separate from attempts, mastery, and the bandit
     posterior, and it never feeds the model-derived reward.
+
+    The quiz measures retention after its delay, so an outcome dated
+    before the due date is rejected with a ValueError unless
+    allow_early is passed explicitly. A record with no due date (none
+    are written that way anymore) is treated as due. The stored
+    outcome carries the realized delay in seconds (scheduled to
+    recorded) and an early / on-time / late status: early is before
+    the due date, on-time is the due day itself, late is after it.
     """
     quiz = find_delayed_quiz(state, quiz_id)
     if quiz is None or quiz.get("status") != "pending":
         return None
+    due_ts = quiz.get("due_ts")
+    if due_ts is not None and now < due_ts and not allow_early:
+        raise ValueError(
+            f"delayed quiz {quiz_id} has not come due yet; an outcome "
+            "recorded before the due date does not measure retention "
+            "after the delay (pass allow_early=True to record it anyway)"
+        )
+    scheduled_ts = quiz.get("scheduled_ts")
+    if due_ts is not None and now < due_ts:
+        timing = "early"
+    elif due_ts is not None and now > due_ts + 86400.0:
+        timing = "late"
+    else:
+        timing = "on_time"
     quiz["status"] = "completed"
-    quiz["outcome"] = {"solved": bool(solved), "recorded_ts": now}
+    quiz["outcome"] = {
+        "solved": bool(solved),
+        "recorded_ts": now,
+        "delay_seconds": None if scheduled_ts is None else now - scheduled_ts,
+        "timing": timing,
+    }
     return quiz
 
 
