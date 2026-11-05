@@ -32,7 +32,11 @@ def log_attempt(state: dict, problem: dict, solved: bool, minutes: int, now: flo
     after = mastery.mean(state, weak, now)
     reward = max(-1.0, min(1.0, after - before))
     bandit.observe(state, x, reward)
-    st.record_attempt(state, problem, solved, minutes, reward, now)
+    # Deterministic attempt id: the demo history is seeded and must
+    # build identically on every run, unlike real attempts, which get
+    # a fresh random id from record_attempt.
+    st.record_attempt(state, problem, solved, minutes, reward, now,
+                      attempt_id=f"att-demo-{len(state['log']) + 1:03d}")
     return reward, weak, after
 
 
