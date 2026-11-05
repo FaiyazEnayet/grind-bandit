@@ -155,6 +155,33 @@ def cmd_log(args) -> None:
         raise SystemExit(1)
     solved = args.result == "solved"
     now = _now()
+    # Resolve the recommendation link before anything mutates, so a
+    # rejected id leaves the state untouched. An explicit id must name
+    # the latest unconsumed pick and must have selected this problem.
+    # Without one, the link is only inferred when the globally latest
+    # recommendation is recent, unconsumed, and selected this problem;
+    # anything else means the user chose the problem themselves and the
+    # attempt stays unlinked rather than claiming a lineage it does
+    # not have.
+    rec_id = None
+    linkage = None
+    rec_status = None
+    if args.recommendation_id is not None:
+        try:
+            st.validate_recommendation_link(state, args.recommendation_id,
+                                            p["id"])
+        except ValueError as e:
+            print(f"cannot link recommendation: {e}", file=sys.stderr)
+            raise SystemExit(1)
+        rec_id = args.recommendation_id
+        linkage = "explicit"
+        rec_status = {"exposed": True, "accepted": True}
+    else:
+        rec = st.infer_recommendation_link(state, p["id"], now)
+        if rec is not None:
+            rec_id = rec["id"]
+            linkage = "inferred"
+            rec_status = {"exposed": True, "accepted": True}
     x = bandit.context(p, state, now)
     tm = {t: mastery.mean(state, t, now) for t in p["topics"]}
     weak = bandit.weakest_topic(p, tm)
@@ -163,15 +190,22 @@ def cmd_log(args) -> None:
     after = mastery.mean(state, weak, now)
     reward = max(-1.0, min(1.0, after - before))
     bandit.observe(state, x, reward)
-    rec_id = st.latest_recommendation_id(state, p["id"])
-    st.record_attempt(state, p, solved, args.minutes, reward, now,
-                      recommendation_id=rec_id)
+    entry = st.record_attempt(state, p, solved, args.minutes, reward, now,
+                              recommendation_id=rec_id,
+                              linkage_method=linkage,
+                              recommendation_status=rec_status)
     quiz = st.schedule_delayed_quiz(state, bank, p, weak, now,
-                                    recommendation_id=rec_id)
+                                    recommendation_id=rec_id,
+                                    source_attempt_id=entry["attempt_id"])
     st.save(state)
     print(f"logged #{p['id']} {p['title']}: {args.result} ({args.minutes} min)")
     print(f"model-derived reward: {reward:+.3f} (change in modeled mastery "
           f"of {weak}; computed by the model, not a measured learning gain)")
+    if rec_id is not None and linkage == "explicit":
+        print(f"linked to recommendation {rec_id} (id given explicitly)")
+    elif rec_id is not None:
+        print(f"linked to recommendation {rec_id} (inferred: it is the "
+              f"latest unconsumed pick and selected this problem)")
     if quiz is not None:
         due = datetime.fromtimestamp(quiz["due_ts"], tz=timezone.utc).strftime("%Y-%m-%d")
         print(f"delayed transfer quiz scheduled for {due}: "
@@ -379,6 +413,12 @@ def build_parser() -> argparse.ArgumentParser:
     lg.add_argument("problem_id", type=int)
     lg.add_argument("result", choices=["solved", "failed"])
     lg.add_argument("--minutes", type=int, default=30)
+    lg.add_argument("--recommendation-id", default=None,
+                    help="id of the recommendation this attempt answers; "
+                         "must be the latest unconsumed pick and must have "
+                         "selected this problem, otherwise the log is "
+                         "rejected. Without it, a link is only inferred "
+                         "from a recent latest pick and is marked inferred")
     lg.set_defaults(func=cmd_log)
 
     qz = sub.add_parser("quiz", help="record the outcome of a delayed transfer quiz")
