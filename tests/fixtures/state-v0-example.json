@@ -1,0 +1,145 @@
+{
+ "topics": {
+  "array": {
+   "alpha": 2.0,
+   "beta": 1.0,
+   "attempts": 1,
+   "solved": 1,
+   "last_ts": 1700000000.0
+  },
+  "hash-table": {
+   "alpha": 2.0,
+   "beta": 1.0,
+   "attempts": 1,
+   "solved": 1,
+   "last_ts": 1700000000.0
+  },
+  "linked-list": {
+   "alpha": 1.0,
+   "beta": 2.0,
+   "attempts": 1,
+   "solved": 0,
+   "last_ts": 1700086400.0
+  },
+  "math": {
+   "alpha": 1.0,
+   "beta": 2.0,
+   "attempts": 1,
+   "solved": 0,
+   "last_ts": 1700086400.0
+  },
+  "string": {
+   "alpha": 2.0,
+   "beta": 1.0,
+   "attempts": 1,
+   "solved": 1,
+   "last_ts": 1700172800.0
+  }
+ },
+ "problems": {
+  "1": {
+   "attempts": 1,
+   "solved": 1,
+   "last_ts": 1700000000.0,
+   "ever_solved": true
+  },
+  "2": {
+   "attempts": 1,
+   "solved": 0,
+   "last_ts": 1700086400.0,
+   "ever_solved": false
+  },
+  "28": {
+   "attempts": 1,
+   "solved": 1,
+   "last_ts": 1700172800.0,
+   "ever_solved": true
+  }
+ },
+ "log": [
+  {
+   "ts": 1700000000.0,
+   "problem_id": 1,
+   "title": "Two Sum",
+   "difficulty": "Easy",
+   "topics": [
+    "array",
+    "hash-table"
+   ],
+   "solved": true,
+   "minutes": 20,
+   "reward": 0.16666666666666663
+  },
+  {
+   "ts": 1700086400.0,
+   "problem_id": 2,
+   "title": "Add Two Numbers",
+   "difficulty": "Medium",
+   "topics": [
+    "linked-list",
+    "math"
+   ],
+   "solved": false,
+   "minutes": 35,
+   "reward": -0.16666666666666669
+  },
+  {
+   "ts": 1700172800.0,
+   "problem_id": 28,
+   "title": "Find the Index of the First Occurrence in a String",
+   "difficulty": "Easy",
+   "topics": [
+    "string"
+   ],
+   "solved": true,
+   "minutes": 25,
+   "reward": 0.16666666666666663
+  }
+ ],
+ "bandit": {
+  "mean": [
+   0.06172839506172869,
+   0.061728395061728177,
+   -0.3858024691358023,
+   0.1234567901234568,
+   0.12345679012345659
+  ],
+  "prec": [
+   [
+    8.5,
+    7.5,
+    10.0,
+    15.0,
+    15.0
+   ],
+   [
+    7.5,
+    8.5,
+    10.0,
+    15.0,
+    15.0
+   ],
+   [
+    10.0,
+    10.0,
+    16.0,
+    20.0,
+    20.0
+   ],
+   [
+    15.0,
+    15.0,
+    20.0,
+    31.0,
+    30.0
+   ],
+   [
+    15.0,
+    15.0,
+    20.0,
+    30.0,
+    31.0
+   ]
+  ]
+ }
+}

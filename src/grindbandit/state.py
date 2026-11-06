@@ -34,6 +34,14 @@ Persistence guarantees (GB2):
   ValueError rather than loaded and found broken later.
 - Bare filenames work: a path with no directory part saves and loads
   in the current directory.
+- Schema versions (see docs/state-schema.md): a state file records
+  the schema version it was written under in `schema_version`.
+  Files written before versions existed are version 0. Loads migrate
+  in memory only, as above; `migrate_file` (and the `migrate` CLI
+  command) is the persisted path: it backs up the original file
+  bytes first, then writes the migrated state. Migration never
+  invents history: old log entries gain no attempt id or linkage,
+  and no recommendations or quiz records are fabricated.
 """
 
 from __future__ import annotations
@@ -62,11 +70,19 @@ ATTEMPT_LINK_WINDOW_SECONDS = 86400.0
 # before failing with an explicit conflict instead of overwriting.
 LOCK_TIMEOUT_SECONDS = 1.0
 
+# Current state schema version. Bump this whenever the on-disk shape
+# changes in a way old code cannot read, and record the change in
+# docs/state-schema.md with the migration that bridges it. A file
+# with no `schema_version` key was written before versions existed
+# and counts as version 0.
+SCHEMA_VERSION = 1
+
 # Top-level state keys and the type each one must hold. A state file
 # written before a key existed (for example, before recommendations
 # or delayed quizzes were added) migrates by gaining that key with
 # its empty default; the migration is the same on every load.
 STATE_SCHEMA = {
+    "schema_version": int,
     "topics": dict,
     "problems": dict,
     "log": list,
@@ -90,6 +106,7 @@ class StateConflictError(RuntimeError):
 
 def _blank_state() -> dict:
     return {
+        "schema_version": SCHEMA_VERSION,
         "topics": {},
         "problems": {},
         "log": [],
@@ -99,6 +116,21 @@ def _blank_state() -> dict:
     }
 
 
+def state_version(state: dict) -> int:
+    """Schema version a state dict was written under; 0 when unversioned.
+
+    A state with no `schema_version` key predates versioning. Raises
+    ValueError when the recorded version is not an integer, so a
+    mistyped version fails closed instead of migrating as version 0.
+    """
+    version = state.get("schema_version", 0)
+    if isinstance(version, bool) or not isinstance(version, int):
+        raise ValueError(
+            f"state schema_version must be an integer, got {version!r}"
+        )
+    return version
+
+
 def migrate_state(state: dict) -> dict:
     """Return a copy of `state` with every schema key present.
 
@@ -106,11 +138,19 @@ def migrate_state(state: dict) -> dict:
     their values untouched, and unknown keys are kept as they are.
     The result is the same on every call for the same input, and the
     file on disk is not touched: migration happens in memory on load.
+    A state written under an older version is stamped with the
+    current version; a state from a newer version is left alone so
+    validate_state can reject it by name instead of silently
+    downgrading it. Nothing is invented: old log entries gain no
+    attempt id or linkage, and no recommendations or quiz records
+    are fabricated.
     """
     migrated = copy.deepcopy(state)
     for key, expected in STATE_SCHEMA.items():
         if key not in migrated:
             migrated[key] = copy.deepcopy(_blank_state()[key])
+    if state_version(migrated) <= SCHEMA_VERSION:
+        migrated["schema_version"] = SCHEMA_VERSION
     return migrated
 
 
@@ -133,6 +173,12 @@ def validate_state(state: dict) -> dict:
                 f"state key {key!r} must be a {expected.__name__}, "
                 f"got {type(value).__name__ if value is not None else 'missing'}"
             )
+    if state["schema_version"] > SCHEMA_VERSION:
+        raise ValueError(
+            f"state file was written by a newer version "
+            f"(schema version {state['schema_version']}); this code "
+            f"supports up to schema version {SCHEMA_VERSION}"
+        )
     for key in STATE_ENTRY_KEYS:
         for entry in state[key]:
             if not isinstance(entry, dict):
@@ -225,6 +271,59 @@ def save(state: dict, path: str | None = None) -> str:
                 pass
         lock_file.close()
     return path
+
+
+def migrate_file(path: str) -> dict:
+    """Migrate the state file at `path` to the current schema, on disk.
+
+    Reads the file, migrates it in memory, writes the exact original
+    bytes to a backup named `<path>.v<from>.bak`, then saves the
+    migrated state atomically. Returns a dict with the migrated
+    state, the version migrated from, the version migrated to, and
+    the backup path. A file already at the current version is a
+    no-op: nothing is written and no backup is made. A file from a
+    newer version is refused with ValueError and left untouched, and
+    a missing file raises FileNotFoundError. The backup is written
+    once: if one already exists it is left alone, so the earliest
+    pre-migration copy is the one kept. Migration is deterministic:
+    the same input file always produces the same migrated file.
+    """
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"no state file at {path}")
+    with open(path, "rb") as f:
+        original = f.read()
+    try:
+        raw = json.loads(original)
+    except json.JSONDecodeError as exc:
+        raise ValueError(
+            f"state file {path} is not valid JSON: {exc}"
+        ) from exc
+    from_version = state_version(raw)
+    if from_version > SCHEMA_VERSION:
+        raise ValueError(
+            f"state file {path} was written by a newer version "
+            f"(schema version {from_version}); this code supports up "
+            f"to schema version {SCHEMA_VERSION}"
+        )
+    if from_version == SCHEMA_VERSION:
+        return {
+            "state": validate_state(migrate_state(raw)),
+            "from_version": from_version,
+            "to_version": SCHEMA_VERSION,
+            "backup_path": None,
+        }
+    backup_path = f"{path}.v{from_version}.bak"
+    if not os.path.exists(backup_path):
+        with open(backup_path, "wb") as f:
+            f.write(original)
+    migrated = validate_state(migrate_state(raw))
+    save(migrated, path)
+    return {
+        "state": migrated,
+        "from_version": from_version,
+        "to_version": SCHEMA_VERSION,
+        "backup_path": backup_path,
+    }
 
 
 def record_attempt(

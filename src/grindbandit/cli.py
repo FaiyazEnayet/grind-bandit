@@ -1,4 +1,4 @@
-"""Command line interface: next, log, quiz, stats, review, export, reset."""
+"""Command line interface: next, log, quiz, stats, review, export, reset, migrate."""
 
 from __future__ import annotations
 
@@ -400,6 +400,23 @@ def cmd_reset(args) -> None:
     print("progress wiped")
 
 
+def cmd_migrate(args) -> None:
+    path = args.path or st.default_path()
+    try:
+        result = st.migrate_file(path)
+    except FileNotFoundError:
+        print(f"no state file at {path}; nothing to migrate")
+        return
+    if result["backup_path"] is None:
+        print(f"state file {path} is already at schema version "
+              f"{result['to_version']}; nothing to do")
+    else:
+        print(f"migrated state file {path} from schema version "
+              f"{result['from_version']} to schema version "
+              f"{result['to_version']}; backup written to "
+              f"{result['backup_path']}")
+
+
 def build_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(prog="grind-bandit",
                                  description="Your LeetCode grind as a contextual bandit")
@@ -444,6 +461,13 @@ def build_parser() -> argparse.ArgumentParser:
     rs = sub.add_parser("reset", help="wipe all progress")
     rs.add_argument("--yes", action="store_true")
     rs.set_defaults(func=cmd_reset)
+
+    mg = sub.add_parser("migrate", help="migrate the state file to the "
+                        "current schema, keeping a backup of the original")
+    mg.add_argument("--path", default=None,
+                    help="state file to migrate (default: the usual "
+                         "state file)")
+    mg.set_defaults(func=cmd_migrate)
     return ap
 
 
