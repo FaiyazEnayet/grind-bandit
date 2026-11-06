@@ -15,12 +15,35 @@ against the chosen problem and rejected when stale or consumed) or
 inferred (the recent, globally latest, unconsumed pick, labeled as
 inferred on the entry), and each quiz names its source attempt by id.
 Linkage fields are bookkeeping only and never feed the model.
+
+Persistence guarantees (GB2):
+
+- Saves are atomic: the new content is written to a temporary file in
+  the same directory and moved over the old file with os.replace, so
+  an interrupted serialization leaves the prior file readable.
+- Saves are serialized: a save takes an exclusive lock on a
+  `<path>.lock` file first. A save that cannot take the lock within
+  one second fails with StateConflictError instead of silently
+  overwriting another process's work, so two competing attempts are
+  either both retained (sequential saves) or the second one gets an
+  explicit conflict.
+- Loads validate the schema and migrate deterministically: a state
+  file written by an older version gains the missing top-level keys
+  with their empty defaults, in memory only, and nothing else about
+  the file changes. A file with the wrong shape is rejected with
+  ValueError rather than loaded and found broken later.
+- Bare filenames work: a path with no directory part saves and loads
+  in the current directory.
 """
 
 from __future__ import annotations
 
+import copy
+import fcntl
 import json
 import os
+import tempfile
+import time
 import uuid
 from pathlib import Path
 
@@ -35,18 +58,37 @@ DELAYED_QUIZ_DELAY_DAYS = 3
 # latest unconsumed pick, however old it is).
 ATTEMPT_LINK_WINDOW_SECONDS = 86400.0
 
+# How long a save waits for another process to release the state lock
+# before failing with an explicit conflict instead of overwriting.
+LOCK_TIMEOUT_SECONDS = 1.0
 
-def default_path() -> str:
-    return os.environ.get(
-        "GRIND_BANDIT_STATE", str(Path.home() / ".grind-bandit" / "state.json")
-    )
+# Top-level state keys and the type each one must hold. A state file
+# written before a key existed (for example, before recommendations
+# or delayed quizzes were added) migrates by gaining that key with
+# its empty default; the migration is the same on every load.
+STATE_SCHEMA = {
+    "topics": dict,
+    "problems": dict,
+    "log": list,
+    "bandit": dict,
+    "recommendations": list,
+    "delayed_quizzes": list,
+}
+
+# Keys whose list entries must each be an object.
+STATE_ENTRY_KEYS = ("log", "recommendations", "delayed_quizzes")
 
 
-def load(path: str | None = None) -> dict:
-    path = path or default_path()
-    if os.path.exists(path):
-        with open(path) as f:
-            return json.load(f)
+class StateConflictError(RuntimeError):
+    """Raised when another process holds the state lock.
+
+    The caller gets an explicit conflict instead of a silent
+    overwrite: retry after the other process finishes, or reload and
+    save again so both attempts are retained.
+    """
+
+
+def _blank_state() -> dict:
     return {
         "topics": {},
         "problems": {},
@@ -57,11 +99,131 @@ def load(path: str | None = None) -> dict:
     }
 
 
+def migrate_state(state: dict) -> dict:
+    """Return a copy of `state` with every schema key present.
+
+    Missing keys gain their empty defaults; keys already present keep
+    their values untouched, and unknown keys are kept as they are.
+    The result is the same on every call for the same input, and the
+    file on disk is not touched: migration happens in memory on load.
+    """
+    migrated = copy.deepcopy(state)
+    for key, expected in STATE_SCHEMA.items():
+        if key not in migrated:
+            migrated[key] = copy.deepcopy(_blank_state()[key])
+    return migrated
+
+
+def validate_state(state: dict) -> dict:
+    """Raise ValueError when `state` does not match STATE_SCHEMA.
+
+    Returns the state unchanged so callers can chain the check. A
+    non-dict state, a key holding the wrong type, or a list entry
+    that is not an object is rejected by name, before anything is
+    written or relied on.
+    """
+    if not isinstance(state, dict):
+        raise ValueError(
+            f"state must be an object, got {type(state).__name__}"
+        )
+    for key, expected in STATE_SCHEMA.items():
+        value = state.get(key)
+        if not isinstance(value, expected):
+            raise ValueError(
+                f"state key {key!r} must be a {expected.__name__}, "
+                f"got {type(value).__name__ if value is not None else 'missing'}"
+            )
+    for key in STATE_ENTRY_KEYS:
+        for entry in state[key]:
+            if not isinstance(entry, dict):
+                raise ValueError(
+                    f"state key {key!r} must hold objects, "
+                    f"got {type(entry).__name__}"
+                )
+    return state
+
+
+def _lock_path(path: str) -> str:
+    return path + ".lock"
+
+
+def _acquire_lock(path: str):
+    """Take an exclusive lock on the `<path>.lock` file.
+
+    Returns the open lock file; closing it releases the lock. Waits up
+    to LOCK_TIMEOUT_SECONDS, then raises StateConflictError so a
+    contended save fails loudly instead of overwriting.
+    """
+    lock_file = open(_lock_path(path), "a+")
+    deadline = time.monotonic() + LOCK_TIMEOUT_SECONDS
+    while True:
+        try:
+            fcntl.flock(lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            return lock_file
+        except BlockingIOError:
+            if time.monotonic() >= deadline:
+                lock_file.close()
+                raise StateConflictError(
+                    f"state file {path} is locked by another process; "
+                    "reload and save again instead of overwriting"
+                )
+            time.sleep(0.05)
+
+
+def _fsync_dir(directory: str) -> None:
+    fd = os.open(directory, os.O_RDONLY)
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+
+
+def default_path() -> str:
+    return os.environ.get(
+        "GRIND_BANDIT_STATE", str(Path.home() / ".grind-bandit" / "state.json")
+    )
+
+
+def load(path: str | None = None) -> dict:
+    path = path or default_path()
+    if os.path.exists(path):
+        try:
+            with open(path) as f:
+                raw = json.load(f)
+        except json.JSONDecodeError as exc:
+            raise ValueError(
+                f"state file {path} is not valid JSON: {exc}"
+            ) from exc
+        return validate_state(migrate_state(raw))
+    return _blank_state()
+
+
 def save(state: dict, path: str | None = None) -> str:
     path = path or default_path()
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "w") as f:
-        json.dump(state, f, indent=1)
+    state = validate_state(migrate_state(state))
+    directory = os.path.dirname(path) or "."
+    os.makedirs(directory, exist_ok=True)
+    lock_file = _acquire_lock(path)
+    tmp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w", dir=directory, prefix=".state-", suffix=".tmp",
+            delete=False,
+        ) as tmp:
+            tmp_path = tmp.name
+            json.dump(state, tmp, indent=1)
+            tmp.flush()
+            os.fsync(tmp.fileno())
+        os.replace(tmp_path, path)
+        tmp_path = None
+        _fsync_dir(directory)
+    finally:
+        if tmp_path is not None:
+            try:
+                os.unlink(tmp_path)
+            except FileNotFoundError:
+                pass
+        lock_file.close()
     return path
 
 
