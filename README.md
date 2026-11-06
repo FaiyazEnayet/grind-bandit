@@ -33,6 +33,8 @@ A practice recommendation should explain both its opportunity and its uncertaint
 
 Attempt history updates topic estimates and the bandit state. Recommendations combine estimated learning gain, uncertainty and difficulty fit. The dashboard exposes a reproducible scripted history rather than implying it is a real student study.
 
+The model math, with worked numerical examples, is documented in [docs/model.md](docs/model.md); the state file format and its version history in [docs/state-schema.md](docs/state-schema.md).
+
 ## Evidence at a glance
 
 | Scope | Recorded result or contract |
@@ -92,7 +94,7 @@ Logging an attempt also schedules a delayed transfer quiz: a different problem o
 
 - Cold-start recommendations depend heavily on priors.
 - The forgetting half-life and difficulty thresholds are modeling choices.
-- Easy-only histories can bias estimated learning gain. State saving also needs an atomic-write and relative-path fix.
+- Easy-only histories can bias estimated learning gain.
 
 ## License
 

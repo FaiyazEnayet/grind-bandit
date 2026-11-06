@@ -185,8 +185,8 @@ def _mini_bank():
 
 
 def _blank_state():
-    return {"topics": {}, "problems": {}, "log": [], "bandit": {},
-            "recommendations": [], "delayed_quizzes": []}
+    return {"schema_version": 1, "topics": {}, "problems": {}, "log": [],
+            "bandit": {}, "recommendations": [], "delayed_quizzes": []}
 
 
 def test_stage3_grind_bandit_10_early_outcome_rejected_by_default():

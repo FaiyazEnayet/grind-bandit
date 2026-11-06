@@ -32,8 +32,8 @@ def iso_state(tmp_path, monkeypatch):
 
 
 def _blank_state():
-    return {"topics": {}, "problems": {}, "log": [], "bandit": {},
-            "recommendations": [], "delayed_quizzes": []}
+    return {"schema_version": 1, "topics": {}, "problems": {}, "log": [],
+            "bandit": {}, "recommendations": [], "delayed_quizzes": []}
 
 
 def _problem(pid=1, topic="array"):
