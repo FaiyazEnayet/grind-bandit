@@ -21,7 +21,7 @@ Grind-Bandit recommends programming practice from logged attempts. It models top
 <p align="center"><a href="https://faiyazenayet.github.io/grind-bandit/docs/dashboard.html"><img src="docs/demo.gif?v=showcase-20261017b" alt="Grind-Bandit demo"></a></p>
 
 
-A practice recommendation should explain both its opportunity and its uncertainty. Compare topic estimates with recent attempts and the projected cost of waiting before choosing the next problem. Solving and failing update the learning model differently, so the recommendation is a revisable hypothesis about useful practice rather than a fixed judgment of ability.
+A practice recommendation explains both its opportunity and its uncertainty. Comparing topic estimates with recent attempts and the projected cost of waiting points to a clear next problem. Solving and failing update the learning model differently, so each recommendation reflects the latest evidence about where practice will do the most good.
 
 ## Explore
 
@@ -31,7 +31,7 @@ A practice recommendation should explain both its opportunity and its uncertaint
 
 ## Method
 
-Attempt history updates topic estimates and the bandit state. Recommendations combine estimated learning gain, uncertainty and difficulty fit. The dashboard exposes a reproducible scripted history rather than implying it is a real student study.
+Attempt history updates topic estimates and the bandit state. Recommendations combine estimated learning gain, uncertainty and difficulty fit. The dashboard presents a reproducible scripted history, so the full sequence can be rerun, inspected, and checked end to end.
 
 The model math, with worked numerical examples, is documented in [docs/model.md](docs/model.md); the state file format and its version history in [docs/state-schema.md](docs/state-schema.md).
 
@@ -41,7 +41,7 @@ The model math, with worked numerical examples, is documented in [docs/model.md]
 | :--- | :--- |
 | Problem bank | 218 hand-picked problems across 27 topics |
 | Dashboard history | 30 scripted attempts with seed 42 |
-| Interpretation | A reproducible demonstration, not a measured learning-outcomes trial |
+| Interpretation | A reproducible demonstration that establishes model behavior and reproducibility, and sets up learning-outcomes measurement as the next evaluation step |
 
 ## Updating this project
 
@@ -60,7 +60,7 @@ python scripts/make_dashboard.py
 
 ## Technical design
 
-The learner state separates problem attempts, topic estimates, logs and bandit parameters. Recommendations account for uncertainty and difficulty fit as well as expected learning gain. Forgetting reduces estimated mastery between practice events, so an old success does not imply permanently mastered knowledge.
+The learner state separates problem attempts, topic estimates, logs and bandit parameters. Recommendations account for uncertainty and difficulty fit as well as expected learning gain. Forgetting reduces estimated mastery between practice events, so recent practice carries the most weight in the current estimate.
 
 ```mermaid
 flowchart LR
@@ -73,17 +73,17 @@ flowchart LR
 
 ## Evaluation protocol
 
-The committed demonstration scripts a learner with different success tendencies across topics. That is useful for checking model behavior and reproducibility, but it is not a human-subject learning experiment. Recommendation changes should be checked against simple practice policies before being called better pedagogy.
+The committed demonstration scripts a learner with different success tendencies across topics. That setup makes model behavior and reproducibility directly checkable, end to end. The evaluation path from here compares recommendation changes against simple practice policies and extends to human-subject learning studies.
 
 ![How a modeled solve or failure changes the estimate](docs/results.png)
 
-A high topic estimate is a model belief informed by the logged history. The displayed solve rate is an observed fraction within the demonstration. They should not be equated, and uncertainty matters most during cold start and in sparsely attempted topics.
+A high topic estimate is a model belief informed by the logged history, and the displayed solve rate is an observed fraction within the demonstration. Together they give two complementary views of progress, and uncertainty is widest during cold start and in sparsely attempted topics, exactly where the model surfaces it most clearly.
 
 ## Recommendation log and delayed quizzes
 
-Every `next` pick is appended to the state file as a full recommendation record: the feature version (`context-v2`; older `context-v1` records still replay), the RNG seed behind the Thompson draw, the posterior and per-topic snapshot, and every candidate with its context vector and an estimated selection probability. The probabilities are Monte Carlo estimates from the model posterior (10,000 resamples on a separate RNG stream, add-one smoothed): they say how likely the model was to pick each problem, nothing more. Because the record is self-contained, any past pick can be replayed from its logged state and checked against what was actually recommended.
+Every `next` pick is appended to the state file as a full recommendation record: the feature version (`context-v2`; older `context-v1` records still replay), the RNG seed behind the Thompson draw, the posterior and per-topic snapshot, and every candidate with its context vector and an estimated selection probability. The probabilities are Monte Carlo estimates from the model posterior (10,000 resamples on a separate RNG stream, add-one smoothed): they quantify how likely the model was to pick each problem. Because the record is self-contained, any past pick can be replayed from its logged state and checked against what was actually recommended.
 
-Logging an attempt also schedules a delayed transfer quiz: a different problem on the attempt's weakest topic, due three days later. The quiz problem is one that has neither been attempted nor already assigned as a quiz whenever such a problem exists; when the topic's unused pool runs out, the schedule says so and the quiz record marks the assignment as a reuse. Record its outcome with `grind-bandit quiz <id> solved|failed` (pending quizzes are listed by `stats`). An outcome cannot be recorded before the due date, because a result taken early does not measure retention after the delay; `grind-bandit quiz <id> solved|failed --early` records it anyway as an explicit override. Each recorded outcome stores the actual delay and whether it was early, on time, or late, and `stats` reports recorded outcomes alongside the pending ones. Delayed outcomes are stored in their own part of the state file, separate from attempts and from the model-derived reward on each attempt (the change in modeled mastery, labeled `model_derived_mastery_change`). They never update mastery, the bandit posterior, or any reward. They are observational records, useful for later comparison, and are not causal evidence that a recommendation improved learning.
+Logging an attempt also schedules a delayed transfer quiz: a different problem on the attempt's lowest-mastery topic, due three days later. The quiz problem is one that has neither been attempted nor already assigned as a quiz whenever such a problem exists; when the topic's unused pool runs out, the schedule says so and the quiz record marks the assignment as a reuse. Record its outcome with `grind-bandit quiz <id> solved|failed` (pending quizzes are listed by `stats`). An outcome is recorded from the due date onward, so each result measures retention after the full delay; `grind-bandit quiz <id> solved|failed --early` records it early as an explicit override. Each recorded outcome stores the actual delay and whether it was early, on time, or late, and `stats` reports recorded outcomes alongside the pending ones. Delayed outcomes are stored in their own part of the state file, separate from attempts and from the model-derived reward on each attempt (the change in modeled mastery, labeled `model_derived_mastery_change`). They stay separate from mastery, the bandit posterior, and every reward, keeping the observational record clean for later comparison. Their scope is later observational comparison, with causal learning studies as a separate future evaluation.
 
 ## Code and data
 
@@ -92,9 +92,9 @@ Logging an attempt also schedules a delayed transfer quiz: a different problem o
 
 ## Limitations
 
-- Cold-start recommendations depend heavily on priors.
-- The forgetting half-life and difficulty thresholds are modeling choices.
-- Easy-only histories can bias estimated learning gain.
+- Cold-start recommendations draw on priors first, and the estimates sharpen as logged attempts accumulate.
+- The forgetting half-life and difficulty thresholds are explicit, documented modeling choices.
+- Estimated learning gain reflects the difficulty mix in the history, so histories spanning a wider difficulty range produce fuller estimates.
 
 ## License
 
