@@ -41,6 +41,7 @@ separately as observational records that never feed this reward.
 
 from __future__ import annotations
 
+import math
 import uuid
 
 import numpy as np
@@ -175,6 +176,70 @@ def score(theta: np.ndarray, x: np.ndarray) -> float:
     return float(theta @ x)
 
 
+def analytic_pair_selection_probability(
+    mean: np.ndarray,
+    cov: np.ndarray,
+    x1: np.ndarray,
+    x2: np.ndarray,
+) -> float:
+    """Exact probability that candidate 1 beats candidate 2 for fixed contexts.
+
+    With theta ~ N(mu, Sigma) and d = x1 - x2, the score difference
+    theta^T d is normal with mean mu^T d and variance d^T Sigma d, so
+    P(select 1) = Phi(mu^T d / sqrt(d^T Sigma d)) whenever that variance
+    is strictly positive. Continuous ties have probability zero and are
+    ignored. Degenerate cases are stable by construction: with no spread
+    in the score difference the draw is the mean, so the sign of
+    mu^T d decides, and an exact tie (including identical contexts,
+    where d = 0) is reported as 0.5.
+    """
+    mu = np.asarray(mean, dtype=float)
+    sigma = np.asarray(cov, dtype=float)
+    d = np.asarray(x1, dtype=float) - np.asarray(x2, dtype=float)
+    mean_diff = float(mu @ d)
+    var = float(d @ sigma @ d)
+    if var <= 0.0:
+        if mean_diff > 0.0:
+            return 1.0
+        if mean_diff < 0.0:
+            return 0.0
+        return 0.5
+    return 0.5 * (1.0 + math.erf(mean_diff / math.sqrt(2.0 * var)))
+
+
+def estimate_selection_probabilities_with_error(
+    state: dict,
+    contexts: list[np.ndarray],
+    seed: int,
+    samples: int = PROBABILITY_SAMPLES,
+) -> tuple[list[float], list[float]]:
+    """Monte Carlo selection probabilities plus a separate error estimate.
+
+    Same draws as estimate_selection_probabilities: `samples` thetas from
+    the current posterior on a private RNG stream seeded by `seed`. The
+    first return value is the add-one smoothed win frequency, the second
+    is the simulation standard error of the raw win frequency,
+    sqrt(p (1 - p) / samples), one per candidate. The error is reported
+    separately from the smoothed probability on purpose: it measures how
+    far the Monte Carlo estimate itself could be from the exact value,
+    and it does not include the smoothing shift, which is at most
+    1 / (samples + number of candidates) and is accounted for as its own
+    term when comparing against the analytic oracle. The error is zero
+    when a raw win frequency is pinned at 0 or 1.
+    """
+    mean, prec = get_posterior(state)
+    cov = np.linalg.inv(prec)
+    rng = np.random.default_rng(seed)
+    thetas = rng.multivariate_normal(mean, cov, size=samples)
+    X = np.asarray(contexts, dtype=float)
+    winners = np.argmax(thetas @ X.T, axis=1)
+    counts = np.bincount(winners, minlength=len(contexts)).astype(float)
+    raw = counts / samples
+    probs = ((counts + 1.0) / (samples + len(contexts))).tolist()
+    ses = np.sqrt(raw * (1.0 - raw) / samples).tolist()
+    return probs, ses
+
+
 def estimate_selection_probabilities(
     state: dict,
     contexts: list[np.ndarray],
@@ -190,16 +255,14 @@ def estimate_selection_probabilities(
     and the values sum to 1. Candidates must be ordered by problem id so
     ties resolve the same way as the actual pick (lowest id wins). These
     are probabilities under the model posterior, not measured frequencies
-    and not evidence about learning.
+    and not evidence about learning. For the simulation error of each
+    estimate, see estimate_selection_probabilities_with_error; for the
+    exact two-candidate value, see analytic_pair_selection_probability.
     """
-    mean, prec = get_posterior(state)
-    cov = np.linalg.inv(prec)
-    rng = np.random.default_rng(seed)
-    thetas = rng.multivariate_normal(mean, cov, size=samples)
-    X = np.asarray(contexts, dtype=float)
-    winners = np.argmax(thetas @ X.T, axis=1)
-    counts = np.bincount(winners, minlength=len(contexts)).astype(float)
-    return ((counts + 1.0) / (samples + len(contexts))).tolist()
+    probs, _ = estimate_selection_probabilities_with_error(
+        state, contexts, seed, samples
+    )
+    return probs
 
 
 def build_recommendation(
