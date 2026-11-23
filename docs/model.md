@@ -225,6 +225,69 @@ the same as transfer on a fresh programming problem, and one attempt on
 a multi-topic problem yields one observation per topic, so those
 observations share an outcome.
 
+## Shadow skill model: ability-difficulty separation (research only)
+
+Untouched topics default to 0.5 modeled mastery, and the difficulty
+fit uses hard thresholds, while the bank holds only 10 Hard problems.
+A failed Hard problem may reflect difficulty as much as lack of topic
+competence, and the topic means cannot tell those apart.
+`src/grindbandit/research/skill_model.py` asks offline whether a
+prediction head that separates ability from difficulty predicts the
+next attempt better. It is a shadow model: it reads the attempt log,
+never writes state, and never feeds mastery, the bandit, or any
+reward. The production prediction stays the existing per-topic means.
+
+An observation is one attempt: problem id, difficulty, topics,
+whether it was solved, and its timestamp. Repeated attempts on the
+same problem are marked as repeats and counted, not dropped.
+Candidates are the trivial global solve rate, the existing per-topic
+means, and a deterministic per-difficulty rate heuristic as
+baselines; a hierarchical Beta-binomial with a fixed shrinkage
+strength of 8 pseudo-observations toward the global rate, and a
+small regularized Rasch-style model (one ability per topic, shrunk
+toward a global ability, plus per-difficulty offsets with Medium
+anchored at zero) as learned candidates. Fits use training periods
+only and are compared on the latest quarter of observations by time,
+using Brier score, log loss, calibration bins, and per-topic and
+by-difficulty breakdowns.
+
+The gate is strict. A learned model is adopted only when it beats
+all three baselines on holdout Brier and log loss, with a paired
+bootstrap 95 percent interval for its Brier improvement over the
+production topic means that excludes zero, and with no pathological
+flag (a Rasch parameter on its bound, a failed fit, or a training
+set with no outcome variation at all). The gate needs at least 60
+training and 20 holdout observations, or the verdict is
+NOT IDENTIFIABLE. The shrinkage strength is fixed, not fitted from
+the counts: one attempt on a multi-topic problem contributes to
+several topics' counts at once, so the counts mix several true rates
+and cannot identify the strength.
+
+On controlled simulation with a known truth the machinery behaves as
+designed. With both topic ability and difficulty in play (2,000
+attempts, seed 7) the Rasch-style head is adopted: holdout Brier
+0.1805 versus 0.2012 for the topic means, 0.2128 global, and 0.1867
+for the difficulty heuristic, with log loss 0.5408 versus 0.5908,
+0.6171, and 0.5567, and a bootstrap interval of -0.0291 to -0.0121.
+The fit recovers the truth approximately (ability -0.10 against 0,
+Easy -1.01 against -1.0, array 1.30 against 1.2) but splits the
+Hard/dp effect between the two (Hard 0.71 against 1.0, dp -0.44
+against -1.2), because half of the 10 Hard problems are dp: ability
+and difficulty are partly confounded in this bank, and the model
+says so in its fitted values rather than hiding it. With only topic
+signal, only difficulty signal, or no signal at all, the gate
+correctly keeps the simple model: in the topic-only world the shrunk
+head beats the raw topic means on Brier (0.2370 versus 0.2404) but
+loses to the global rate (0.2368) and the difficulty heuristic
+(0.2336), so it does not pass the gate, and in the difficulty-only
+world the Rasch head carries the same information as the
+deterministic heuristic (Brier 0.1881 versus 0.1796). On the scripted demo history the verdict is NOT
+IDENTIFIABLE: 30 observations against the 60 plus 20 minimum. No
+real skill measurement has been fitted yet, so nothing here is
+promoted. Attempts are user-selected, not randomly assigned, so
+this comparison is a predictive check, not an estimate of true
+ability from one student and a sparse bank.
+
 ## Honest limits
 
 - The reward is model-derived, not a measured learning outcome.
@@ -236,3 +299,6 @@ observations share an outcome.
   measurement has been fitted to it.
 - Cold-start recommendations depend heavily on the priors.
 - Easy-only histories can bias estimated learning gain.
+- Ability and difficulty are partly confounded in this bank: half of
+  the 10 Hard problems are dp, so a Hard failure on a dp problem
+  cannot be cleanly split between topic ability and difficulty.
