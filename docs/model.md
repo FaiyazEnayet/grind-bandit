@@ -185,6 +185,46 @@ bandit posterior, or any reward. It is an observational record,
 useful for later comparison, not causal evidence that a
 recommendation improved learning.
 
+## Shadow retention model: learnable half-life (research only)
+
+The 30-day half-life above is a fixed choice, not a fitted optimum.
+`src/grindbandit/research/retention.py` asks offline whether a
+learned half-life predicts later recall better. It is a shadow model:
+it reads the attempt log, never writes state, and never feeds mastery,
+the bandit, or any reward. The production decay stays fixed at 30 days.
+
+An observation is a later attempt on a topic after an earlier solved
+attempt on the same topic. Predicted recall at elapsed time D with
+half-life h is p = 2^(-D/h). Candidates are the trivial global solve
+rate, the fixed 30-day baseline, one learned global half-life, a
+per-topic half-life shrunk toward the global value (pseudo-count 8,
+fitted only with at least 3 observations on the topic), and a
+recurrence model where the half-life grows monotonically with prior
+practice on the topic. Fits use training periods only and are compared
+on the latest quarter of observations by time, using Brier score, log
+loss, calibration bins, and due-date error (the day predicted recall
+falls to 0.5, versus the actual next attempt).
+
+The gate is strict. A learned model is adopted only when it beats both
+baselines on holdout Brier and log loss, with a paired bootstrap 95
+percent interval for its Brier improvement over fixed 30 that excludes
+zero, and with no fitted half-life on the 1 to 365 day bounds. The gate
+needs at least 60 training and 20 holdout observations, or the verdict
+is NOT IDENTIFIABLE.
+
+On controlled simulation with a known truth the machinery behaves as
+designed: with a true half-life of 12 days (400 observations, seed 7)
+the learned model fits 10.68 days and wins on the holdout (Brier 0.1012
+versus 0.1369 fixed, interval -0.0675 to -0.0038), while with a true
+half-life of 30 days it correctly keeps the simple model (Brier 0.0958
+versus 0.0961 fixed, interval -0.0021 to 0.0014). On the scripted demo
+history the verdict is NOT IDENTIFIABLE: 40 observations against the
+60 plus 20 minimum. No real retention measurement has been fitted yet,
+so nothing here is promoted. Recall on a flashcard-style repeat is not
+the same as transfer on a fresh programming problem, and one attempt on
+a multi-topic problem yields one observation per topic, so those
+observations share an outcome.
+
 ## Honest limits
 
 - The reward is model-derived, not a measured learning outcome.
