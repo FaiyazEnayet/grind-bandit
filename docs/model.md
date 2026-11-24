@@ -288,6 +288,71 @@ promoted. Attempts are user-selected, not randomly assigned, so
 this comparison is a predictive check, not an estimate of true
 ability from one student and a sparse bank.
 
+## Budget-aware policies (shadow, policy-v1)
+
+Recommending the highest predicted gain per pick may waste learner
+time: a learner with 15 minutes left should not get a 45 minute
+problem. `src/grindbandit/policies/` asks offline whether a policy
+that prices time would serve a session better, under a versioned
+policy branch (`policy-v1`). It is shadow only: the registry records
+current LinTS as the sole production policy, every challenger as
+shadow, and live selection is untouched.
+
+Candidate features are budget, expected minutes, difficulty,
+novelty, and interval since the target skill was practiced.
+Expected minutes are historically observed minutes for the
+problem's difficulty, leave-one-problem-out, so a problem's own
+recorded minutes never predict its own duration; with no history
+on a difficulty the predeclared prior applies (Easy 15, Medium 30,
+Hard 45 minutes). Novelty is 1 for a never-attempted problem, else
+0. Interval is days since the problem's weakest topic was last
+practiced, capped at 30, with a never-practiced topic counting as
+the full cap. Utility is U = predicted delayed-transfer benefit
+minus lambda times expected time, with lambda 0.01 reward units per
+minute. The predicted benefit is the sampled LinTS score in
+model-derived reward units, explicitly hypothetical as a transfer
+predictor until a valid predictive head exists.
+
+The six policies are current LinTS, shortest expected-duration,
+weakest-topic, due-first spaced schedule (due reviews first, then
+new practice, each ordered by interval), contextual cost-aware
+LinTS (sampled score minus lambda times expected minutes), and
+constrained LinTS (LinTS among problems whose expected minutes fit
+the remaining budget, and no pick at all when nothing fits instead
+of overrunning). All six draw from the same eligible set under the
+live eligibility rule, so comparisons are eligibility-matched.
+`src/grindbandit/research/policy_comparison.py` runs them through
+fixed 15, 30, and 60 minute sessions in a simulated world with a
+known truth (true mastery strong on array and string, weak on dp,
+graph, and backtracking; true durations around 12, 25, and 45
+minutes by difficulty; match-gated learning; transfer measured as
+mean solve probability on novel quiz problems fixed before the
+session). The gate adopts a challenger only when its transfer
+improvement over LinTS has a paired bootstrap 95 percent interval
+entirely above zero, its mean overrun is at most 5 percent of the
+budget, and it does not starve Hard topics (Hard share below a
+quarter of LinTS) or narrow topic coverage (below half of LinTS).
+
+On the simulation the machinery behaves as designed and no
+challenger wins. At 30 replications, seed 7, transfer is 0.7368,
+0.7371, and 0.7378 for LinTS at 15, 30, and 60 minutes, and every
+challenger sits slightly below it: weakest-topic is closest
+(-0.0006, -0.0006, -0.0010, intervals including zero),
+shortest-duration falls furthest at 60 minutes (-0.0060), and
+cost-aware and constrained sit between -0.0009 and -0.0027. The
+comparison still separates the policies where it should: the
+unconstrained policies overrun badly (LinTS mean overrun 17.17,
+14.21, and 17.09 minutes), while constrained LinTS nearly respects
+the budget (0.69, 1.72, and 1.32 minutes), and shortest-duration
+and due-first pick no Hard problems at 15 minutes, which the
+starvation flag catches. The same no-winner verdict holds at seed
+11. On the scripted demo history the real-data verdict is
+NOT IDENTIFIABLE: 0 linked delayed-transfer observations against
+the 30 minimum. No real policy measurement exists yet, so nothing
+here is promoted. Run it with `python -m
+grindbandit.research.evaluate_policies --state PATH` (or `--demo`
+for the scripted history, plus `--simulate` for the comparison).
+
 ## Honest limits
 
 - The reward is model-derived, not a measured learning outcome.
