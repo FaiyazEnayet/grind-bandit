@@ -185,6 +185,30 @@ bandit posterior, or any reward. It is an observational record,
 useful for later comparison, not causal evidence that a
 recommendation improved learning.
 
+A different problem ID alone does not prove novel transfer, because
+interview questions often share a solution template. The bank
+carries a curated, versioned family layer
+(`src/grindbandit/data/problem_families.json`, `families-v1`): 29
+solution-template families, for example BFS flood fill versus BFS
+shortest path and binary search on the answer versus binary search
+on an index, with explicit multi-label tags on all 218 problems and
+a note wherever two templates are both canonical for a problem.
+The quiz chooser prefers the same target skill with a different
+surface item and a different family where one is available, and
+every quiz record carries a transfer block: the tag
+(`near-transfer`, `same-family`, `repeat`, or `unknown`), whether
+family novelty is satisfied, both family sets, and whether any
+family-different alternative existed in the pool. A quiz counts as
+novel transfer only when it is both unseen and near-transfer.
+`src/grindbandit/research/transfer_splits.py` splits the bank
+deterministically by problem or by whole primary families (seed 7
+holds out 9 families, 62 of 218 problems) and audits family
+leakage across the split: secondary tags still co-occur across a
+family-held-out split, and the audit reports that instead of
+hiding it, along with the blocked cases (the one-problem
+prefix-sums family, and the intervals topic, whose problems all
+share the greedy-interval family).
+
 ## Shadow retention model: learnable half-life (research only)
 
 The 30-day half-life above is a fixed choice, not a fitted optimum.
