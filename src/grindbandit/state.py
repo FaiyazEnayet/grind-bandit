@@ -55,8 +55,31 @@ import time
 import uuid
 from pathlib import Path
 
+from grindbandit import problems
+from grindbandit.research import transfer_splits
+
 # Days between logging an attempt and its delayed transfer quiz coming due.
 DELAYED_QUIZ_DELAY_DAYS = 3
+
+_FAMILIES_CACHE: dict | None = None
+_FAMILIES_MISSING = False
+
+
+def _resolve_families(families: dict | None) -> dict | None:
+    """The family layer to use: the one passed in, else the shipped
+    file, else None when no family data is available."""
+    global _FAMILIES_CACHE, _FAMILIES_MISSING
+    if families is not None:
+        return families
+    if _FAMILIES_MISSING:
+        return None
+    if _FAMILIES_CACHE is None:
+        try:
+            _FAMILIES_CACHE = problems.load_families()
+        except (ValueError, OSError):
+            _FAMILIES_MISSING = True
+            return None
+    return _FAMILIES_CACHE
 
 # How recent the latest recommendation must be for `log` without an
 # explicit id to infer that the attempt answers it. A day matches the
@@ -513,7 +536,8 @@ def _is_novel(problem: dict, attempted_ids: set, assigned_ids: set) -> bool:
 
 
 def choose_quiz_problem(
-    bank: list[dict], attempted: dict, topic: str, state: dict
+    bank: list[dict], attempted: dict, topic: str, state: dict,
+    families: dict | None = None,
 ) -> dict | None:
     """Pick a different problem on the same topic for a delayed quiz.
 
@@ -523,6 +547,13 @@ def choose_quiz_problem(
     2. assigned before but never attempted;
     3. attempted before but never assigned;
     4. attempted and assigned before.
+
+    Inside each tier, a problem built on a different solution
+    template from the source problem (near-transfer) comes before
+    one whose template is unknown, which comes before one sharing
+    the source template (same-family). A different problem ID alone
+    does not prove novel transfer, so family is the second sort key,
+    never the first: novelty still decides before family.
 
     A problem is therefore never assigned twice while a novel
     alternative exists, and previously attempted problems are the last
@@ -534,11 +565,23 @@ def choose_quiz_problem(
         return None
     attempted_ids = set(state.get("problems", {}).keys())
     assigned_ids = {i for i in _assigned_quiz_problem_ids(state) if i is not None}
+    fams = _resolve_families(families)
+    source_id = attempted["id"]
 
     def tier(p: dict) -> tuple:
         return (str(p["id"]) in attempted_ids, p["id"] in assigned_ids)
 
-    return min(pool, key=lambda p: (tier(p), p["id"]))
+    def family_rank(p: dict) -> int:
+        if fams is None:
+            return 1
+        tag = transfer_splits.classify_transfer(source_id, p["id"], fams)
+        if tag == transfer_splits.NEAR_TRANSFER:
+            return 0
+        if tag == transfer_splits.UNKNOWN:
+            return 1
+        return 2
+
+    return min(pool, key=lambda p: (tier(p), family_rank(p), p["id"]))
 
 
 def schedule_delayed_quiz(
@@ -549,6 +592,7 @@ def schedule_delayed_quiz(
     now: float,
     recommendation_id: str | None = None,
     source_attempt_id: str | None = None,
+    families: dict | None = None,
 ) -> dict | None:
     """Schedule a delayed transfer quiz for an attempt. Returns it or None.
 
@@ -558,9 +602,14 @@ def schedule_delayed_quiz(
     nowhere else. source_attempt_id is the immutable id of the exact
     attempt that produced this quiz (see record_attempt), recorded
     alongside the source problem and recommendation so the lineage
-    names one attempt, never just a problem.
+    names one attempt, never just a problem. The record also carries
+    a transfer block: whether the quiz item shares a solution
+    template with the source problem, whether family novelty is
+    satisfied, and whether any family-different alternative existed
+    in the pool at all.
     """
-    quiz_problem = choose_quiz_problem(bank, attempted, topic, state)
+    quiz_problem = choose_quiz_problem(bank, attempted, topic, state,
+                                       families=families)
     if quiz_problem is None:
         return None
     assigned_ids = _assigned_quiz_problem_ids(state)
@@ -569,6 +618,36 @@ def schedule_delayed_quiz(
         p for p in _quiz_pool(bank, attempted, topic)
         if _is_novel(p, attempted_ids, set(assigned_ids))
     ]
+    fams = _resolve_families(families)
+    if fams is None:
+        transfer: dict = {
+            "tag": "unknown",
+            "family_novelty_satisfied": False,
+            "source_families": [],
+            "quiz_families": [],
+            "near_transfer_available": None,
+        }
+    else:
+        pool = _quiz_pool(bank, attempted, topic)
+        transfer = {
+            "tag": transfer_splits.classify_transfer(
+                attempted["id"], quiz_problem["id"], fams),
+            "family_novelty_satisfied":
+                transfer_splits.family_novelty_satisfied(
+                    attempted["id"], quiz_problem["id"], fams),
+            "source_families": problems.families_for(attempted["id"], fams),
+            "quiz_families": problems.families_for(quiz_problem["id"], fams),
+            # Whether any family-different alternative existed in the
+            # pool at all. When False, the same-family pick below is
+            # an explicit fallback, not a silent repeat of the
+            # source template.
+            "near_transfer_available": any(
+                transfer_splits.classify_transfer(
+                    attempted["id"], p["id"], fams)
+                == transfer_splits.NEAR_TRANSFER
+                for p in pool
+            ),
+        }
     quiz = {
         "id": f"quiz-{uuid.uuid4().hex[:12]}",
         "kind": "delayed_transfer_quiz",
@@ -591,6 +670,12 @@ def schedule_delayed_quiz(
             "prior_assignments": assigned_ids.count(quiz_problem["id"]),
             "pool_exhausted": not novel_pool,
         },
+        # The transfer relation to the source problem: same-family,
+        # near-transfer (a different solution template), repeat, or
+        # unknown when either side carries no family tags. A quiz
+        # counts as novel transfer only when it is both novel above
+        # and near-transfer here; see research.transfer_splits.
+        "transfer": transfer,
         "status": "pending",
         "outcome": None,
     }

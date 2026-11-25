@@ -1,0 +1,1681 @@
+{
+  "version": "families-v1",
+  "note": "Curated solution-template families for the 218-problem bank. A tag names the canonical solution template, not the topic: BFS flood fill and BFS shortest path are different families, as are binary search on an index and binary search on the answer. A problem carries more than one tag only when two templates are both canonical for it; the note on the assignment says which. Tags are annotations for transfer measurement, human reviewed, and do not imply validated prerequisite edges.",
+  "families": [
+    {
+      "id": "two-pointers",
+      "label": "Two pointers",
+      "description": "Two pointers move over a linear structure under an invariant: converging ends, fast and slow, or a read and write pointer.",
+      "examples": [
+        11,
+        15
+      ]
+    },
+    {
+      "id": "sliding-window",
+      "label": "Sliding window",
+      "description": "A window over a contiguous subarray or substring expands and shrinks while a condition holds.",
+      "examples": [
+        3,
+        219
+      ]
+    },
+    {
+      "id": "binary-search-index",
+      "label": "Binary search on an index",
+      "description": "Binary search over a sorted array or value range where each probe compares directly against the target.",
+      "examples": [
+        704,
+        33
+      ]
+    },
+    {
+      "id": "binary-search-answer",
+      "label": "Binary search on the answer",
+      "description": "Binary search over a candidate answer using a monotonic feasibility predicate.",
+      "examples": [
+        875,
+        69
+      ]
+    },
+    {
+      "id": "bfs-shortest-path",
+      "label": "BFS shortest path",
+      "description": "Breadth-first search over an unweighted graph or grid to reach a target in the fewest steps.",
+      "examples": [
+        994,
+        1091
+      ]
+    },
+    {
+      "id": "bfs-flood-fill",
+      "label": "BFS flood fill",
+      "description": "Flood fill or connected-component traversal of a grid or graph, by BFS or DFS.",
+      "examples": [
+        200,
+        130
+      ]
+    },
+    {
+      "id": "dfs-backtracking",
+      "label": "Backtracking",
+      "description": "Depth-first search that builds candidates incrementally and prunes dead ends.",
+      "examples": [
+        78,
+        46
+      ]
+    },
+    {
+      "id": "dp-1d",
+      "label": "One-dimensional DP",
+      "description": "Dynamic programming with a linear recurrence over a prefix or running state.",
+      "examples": [
+        70,
+        198
+      ]
+    },
+    {
+      "id": "dp-2d",
+      "label": "Two-dimensional DP",
+      "description": "Dynamic programming over two indices: a grid, two strings, or two sequences.",
+      "examples": [
+        1143,
+        72
+      ]
+    },
+    {
+      "id": "dp-knapsack",
+      "label": "Knapsack DP",
+      "description": "Knapsack, subset-sum, or partition dynamic programming over a capacity or target sum.",
+      "examples": [
+        416,
+        494
+      ]
+    },
+    {
+      "id": "greedy-interval",
+      "label": "Greedy intervals",
+      "description": "Greedy scheduling, merging, or sweep line over sorted intervals.",
+      "examples": [
+        56,
+        435
+      ]
+    },
+    {
+      "id": "greedy-heap",
+      "label": "Greedy with a heap",
+      "description": "Greedy selection driven by a heap: top-k, two heaps, or smallest-sums expansion.",
+      "examples": [
+        215,
+        347
+      ]
+    },
+    {
+      "id": "greedy-scan",
+      "label": "Greedy single pass",
+      "description": "One left-to-right pass tracking a running optimum or feasibility bound.",
+      "examples": [
+        121,
+        55
+      ]
+    },
+    {
+      "id": "hashmap-counting",
+      "label": "Hash map counting",
+      "description": "A hash map records frequencies or complements to answer membership in constant time.",
+      "examples": [
+        1,
+        242
+      ]
+    },
+    {
+      "id": "stack-matching",
+      "label": "Stack matching",
+      "description": "A stack matches, parses, or evaluates nested or postfix structure.",
+      "examples": [
+        20,
+        150
+      ]
+    },
+    {
+      "id": "stack-monotonic",
+      "label": "Monotonic stack",
+      "description": "A monotonic stack finds the next greater or smaller element, or a maximal span.",
+      "examples": [
+        739,
+        84
+      ]
+    },
+    {
+      "id": "linked-list-pointers",
+      "label": "Linked-list pointers",
+      "description": "Pointer manipulation on a linked list: reversal, merge, dummy head, or fast and slow pointers.",
+      "examples": [
+        206,
+        21
+      ]
+    },
+    {
+      "id": "tree-traversal",
+      "label": "Tree traversal",
+      "description": "Recursive or level-order traversal of a tree: paths, depths, validation, or construction.",
+      "examples": [
+        104,
+        102
+      ]
+    },
+    {
+      "id": "graph-union-find",
+      "label": "Union-find",
+      "description": "A disjoint-set union structure tracks connectivity as edges are added.",
+      "examples": [
+        128,
+        200
+      ]
+    },
+    {
+      "id": "graph-topo-sort",
+      "label": "Topological sort",
+      "description": "Ordering vertices so every edge runs forward, by Kahn's algorithm or DFS postorder.",
+      "examples": [
+        207,
+        210
+      ]
+    },
+    {
+      "id": "graph-weighted-shortest-path",
+      "label": "Weighted shortest path",
+      "description": "Dijkstra or Bellman-Ford style relaxation over weighted edges.",
+      "examples": [
+        743,
+        787
+      ]
+    },
+    {
+      "id": "trie-prefix",
+      "label": "Trie",
+      "description": "A prefix tree indexes strings by their prefixes for lookup or completion.",
+      "examples": [
+        208,
+        14
+      ]
+    },
+    {
+      "id": "bit-manipulation",
+      "label": "Bit manipulation",
+      "description": "Bit tricks: XOR cancellation, masks, shifts, or bit counting.",
+      "examples": [
+        136,
+        191
+      ]
+    },
+    {
+      "id": "math-arithmetic",
+      "label": "Direct math",
+      "description": "Closed-form arithmetic, number theory, or direct formula evaluation.",
+      "examples": [
+        258,
+        50
+      ]
+    },
+    {
+      "id": "design-structure",
+      "label": "Data structure design",
+      "description": "Design of a structure meeting required operations within stated time bounds.",
+      "examples": [
+        155,
+        208
+      ]
+    },
+    {
+      "id": "divide-conquer",
+      "label": "Divide and conquer",
+      "description": "Split the input, solve recursively, and merge: merge-sort style recursion.",
+      "examples": [
+        108,
+        50
+      ]
+    },
+    {
+      "id": "prefix-sums",
+      "label": "Prefix sums",
+      "description": "Prefix or suffix products and sums answer range queries in constant time.",
+      "examples": [
+        238
+      ]
+    },
+    {
+      "id": "string-manipulation",
+      "label": "String manipulation",
+      "description": "Building, parsing, or transforming a string in place or by reconstruction.",
+      "examples": [
+        58,
+        344
+      ]
+    },
+    {
+      "id": "simulation",
+      "label": "Simulation",
+      "description": "Direct simulation of the stated process, step by step.",
+      "examples": [
+        54,
+        6
+      ]
+    }
+  ],
+  "assignments": [
+    {
+      "problem_id": 1,
+      "families": [
+        "hashmap-counting"
+      ]
+    },
+    {
+      "problem_id": 2,
+      "families": [
+        "linked-list-pointers",
+        "math-arithmetic"
+      ]
+    },
+    {
+      "problem_id": 3,
+      "families": [
+        "sliding-window"
+      ]
+    },
+    {
+      "problem_id": 4,
+      "families": [
+        "binary-search-answer",
+        "divide-conquer"
+      ],
+      "note": "Binary search on the partition point between the two arrays."
+    },
+    {
+      "problem_id": 5,
+      "families": [
+        "two-pointers",
+        "dp-2d"
+      ],
+      "note": "Expand around center (two pointers) and DP table are both canonical."
+    },
+    {
+      "problem_id": 6,
+      "families": [
+        "simulation"
+      ]
+    },
+    {
+      "problem_id": 7,
+      "families": [
+        "math-arithmetic"
+      ]
+    },
+    {
+      "problem_id": 10,
+      "families": [
+        "dp-2d"
+      ]
+    },
+    {
+      "problem_id": 11,
+      "families": [
+        "two-pointers"
+      ]
+    },
+    {
+      "problem_id": 12,
+      "families": [
+        "math-arithmetic"
+      ],
+      "note": "Greedy value-symbol table lookup."
+    },
+    {
+      "problem_id": 13,
+      "families": [
+        "hashmap-counting"
+      ],
+      "note": "Symbol values looked up in a map."
+    },
+    {
+      "problem_id": 14,
+      "families": [
+        "string-manipulation",
+        "trie-prefix"
+      ],
+      "note": "Vertical scan; a trie is the structural alternative."
+    },
+    {
+      "problem_id": 15,
+      "families": [
+        "two-pointers"
+      ]
+    },
+    {
+      "problem_id": 19,
+      "families": [
+        "linked-list-pointers"
+      ]
+    },
+    {
+      "problem_id": 20,
+      "families": [
+        "stack-matching"
+      ]
+    },
+    {
+      "problem_id": 21,
+      "families": [
+        "linked-list-pointers"
+      ]
+    },
+    {
+      "problem_id": 22,
+      "families": [
+        "dfs-backtracking",
+        "dp-1d"
+      ],
+      "note": "Backtracking and DP counting are both canonical."
+    },
+    {
+      "problem_id": 23,
+      "families": [
+        "greedy-heap",
+        "divide-conquer"
+      ]
+    },
+    {
+      "problem_id": 24,
+      "families": [
+        "linked-list-pointers"
+      ]
+    },
+    {
+      "problem_id": 25,
+      "families": [
+        "linked-list-pointers"
+      ]
+    },
+    {
+      "problem_id": 26,
+      "families": [
+        "two-pointers"
+      ]
+    },
+    {
+      "problem_id": 27,
+      "families": [
+        "two-pointers"
+      ]
+    },
+    {
+      "problem_id": 28,
+      "families": [
+        "string-manipulation"
+      ],
+      "note": "Naive scan; KMP is the advanced alternative."
+    },
+    {
+      "problem_id": 32,
+      "families": [
+        "dp-1d",
+        "stack-monotonic"
+      ],
+      "note": "DP and monotonic stack are both canonical."
+    },
+    {
+      "problem_id": 33,
+      "families": [
+        "binary-search-index"
+      ]
+    },
+    {
+      "problem_id": 34,
+      "families": [
+        "binary-search-index"
+      ]
+    },
+    {
+      "problem_id": 35,
+      "families": [
+        "binary-search-index"
+      ]
+    },
+    {
+      "problem_id": 38,
+      "families": [
+        "simulation",
+        "string-manipulation"
+      ]
+    },
+    {
+      "problem_id": 39,
+      "families": [
+        "dfs-backtracking"
+      ]
+    },
+    {
+      "problem_id": 40,
+      "families": [
+        "dfs-backtracking"
+      ]
+    },
+    {
+      "problem_id": 42,
+      "families": [
+        "two-pointers",
+        "stack-monotonic"
+      ],
+      "note": "Two-pointer and monotonic-stack solutions are both canonical."
+    },
+    {
+      "problem_id": 45,
+      "families": [
+        "greedy-scan"
+      ]
+    },
+    {
+      "problem_id": 46,
+      "families": [
+        "dfs-backtracking"
+      ]
+    },
+    {
+      "problem_id": 47,
+      "families": [
+        "dfs-backtracking"
+      ]
+    },
+    {
+      "problem_id": 48,
+      "families": [
+        "simulation"
+      ]
+    },
+    {
+      "problem_id": 49,
+      "families": [
+        "hashmap-counting"
+      ]
+    },
+    {
+      "problem_id": 50,
+      "families": [
+        "math-arithmetic",
+        "divide-conquer"
+      ]
+    },
+    {
+      "problem_id": 53,
+      "families": [
+        "dp-1d"
+      ]
+    },
+    {
+      "problem_id": 54,
+      "families": [
+        "simulation"
+      ]
+    },
+    {
+      "problem_id": 55,
+      "families": [
+        "greedy-scan",
+        "dp-1d"
+      ],
+      "note": "Greedy reach and DP are both canonical."
+    },
+    {
+      "problem_id": 56,
+      "families": [
+        "greedy-interval"
+      ]
+    },
+    {
+      "problem_id": 57,
+      "families": [
+        "greedy-interval"
+      ]
+    },
+    {
+      "problem_id": 58,
+      "families": [
+        "string-manipulation"
+      ]
+    },
+    {
+      "problem_id": 62,
+      "families": [
+        "dp-2d"
+      ]
+    },
+    {
+      "problem_id": 63,
+      "families": [
+        "dp-2d"
+      ]
+    },
+    {
+      "problem_id": 64,
+      "families": [
+        "dp-2d"
+      ]
+    },
+    {
+      "problem_id": 66,
+      "families": [
+        "math-arithmetic",
+        "simulation"
+      ]
+    },
+    {
+      "problem_id": 69,
+      "families": [
+        "binary-search-answer",
+        "math-arithmetic"
+      ]
+    },
+    {
+      "problem_id": 70,
+      "families": [
+        "dp-1d"
+      ]
+    },
+    {
+      "problem_id": 72,
+      "families": [
+        "dp-2d"
+      ]
+    },
+    {
+      "problem_id": 73,
+      "families": [
+        "hashmap-counting",
+        "simulation"
+      ],
+      "note": "Set-based marking and in-place first-row and column markers are both canonical."
+    },
+    {
+      "problem_id": 74,
+      "families": [
+        "binary-search-index"
+      ]
+    },
+    {
+      "problem_id": 78,
+      "families": [
+        "dfs-backtracking"
+      ]
+    },
+    {
+      "problem_id": 79,
+      "families": [
+        "dfs-backtracking"
+      ]
+    },
+    {
+      "problem_id": 84,
+      "families": [
+        "stack-monotonic"
+      ]
+    },
+    {
+      "problem_id": 88,
+      "families": [
+        "two-pointers"
+      ]
+    },
+    {
+      "problem_id": 90,
+      "families": [
+        "dfs-backtracking"
+      ]
+    },
+    {
+      "problem_id": 91,
+      "families": [
+        "dp-1d"
+      ]
+    },
+    {
+      "problem_id": 98,
+      "families": [
+        "tree-traversal"
+      ]
+    },
+    {
+      "problem_id": 100,
+      "families": [
+        "tree-traversal"
+      ]
+    },
+    {
+      "problem_id": 101,
+      "families": [
+        "tree-traversal"
+      ]
+    },
+    {
+      "problem_id": 102,
+      "families": [
+        "tree-traversal"
+      ]
+    },
+    {
+      "problem_id": 103,
+      "families": [
+        "tree-traversal"
+      ]
+    },
+    {
+      "problem_id": 104,
+      "families": [
+        "tree-traversal"
+      ]
+    },
+    {
+      "problem_id": 108,
+      "families": [
+        "tree-traversal",
+        "divide-conquer"
+      ]
+    },
+    {
+      "problem_id": 110,
+      "families": [
+        "tree-traversal"
+      ]
+    },
+    {
+      "problem_id": 111,
+      "families": [
+        "tree-traversal",
+        "bfs-shortest-path"
+      ],
+      "note": "BFS shortest path to a leaf, framed as tree traversal."
+    },
+    {
+      "problem_id": 112,
+      "families": [
+        "tree-traversal"
+      ]
+    },
+    {
+      "problem_id": 118,
+      "families": [
+        "dp-2d"
+      ]
+    },
+    {
+      "problem_id": 119,
+      "families": [
+        "dp-1d"
+      ]
+    },
+    {
+      "problem_id": 121,
+      "families": [
+        "greedy-scan"
+      ]
+    },
+    {
+      "problem_id": 124,
+      "families": [
+        "tree-traversal"
+      ],
+      "note": "Post-order accumulation; tagged as tree traversal only."
+    },
+    {
+      "problem_id": 125,
+      "families": [
+        "two-pointers"
+      ]
+    },
+    {
+      "problem_id": 128,
+      "families": [
+        "hashmap-counting",
+        "graph-union-find"
+      ],
+      "note": "Hash set scan and union-find are both canonical."
+    },
+    {
+      "problem_id": 130,
+      "families": [
+        "bfs-flood-fill",
+        "graph-union-find"
+      ],
+      "note": "Union-find is a valid alternative to flood fill here."
+    },
+    {
+      "problem_id": 133,
+      "families": [
+        "bfs-flood-fill",
+        "hashmap-counting"
+      ]
+    },
+    {
+      "problem_id": 134,
+      "families": [
+        "greedy-scan"
+      ]
+    },
+    {
+      "problem_id": 136,
+      "families": [
+        "bit-manipulation"
+      ]
+    },
+    {
+      "problem_id": 138,
+      "families": [
+        "linked-list-pointers",
+        "hashmap-counting"
+      ]
+    },
+    {
+      "problem_id": 139,
+      "families": [
+        "dp-1d",
+        "trie-prefix"
+      ],
+      "note": "DP over the string, with a trie as the word lookup."
+    },
+    {
+      "problem_id": 141,
+      "families": [
+        "linked-list-pointers",
+        "hashmap-counting"
+      ],
+      "note": "Hash set and fast and slow pointers are both canonical."
+    },
+    {
+      "problem_id": 142,
+      "families": [
+        "linked-list-pointers",
+        "hashmap-counting"
+      ],
+      "note": "Hash set and fast and slow pointers are both canonical."
+    },
+    {
+      "problem_id": 144,
+      "families": [
+        "tree-traversal"
+      ]
+    },
+    {
+      "problem_id": 145,
+      "families": [
+        "tree-traversal"
+      ]
+    },
+    {
+      "problem_id": 150,
+      "families": [
+        "stack-matching"
+      ]
+    },
+    {
+      "problem_id": 151,
+      "families": [
+        "two-pointers",
+        "string-manipulation"
+      ]
+    },
+    {
+      "problem_id": 152,
+      "families": [
+        "dp-1d"
+      ]
+    },
+    {
+      "problem_id": 153,
+      "families": [
+        "binary-search-index"
+      ]
+    },
+    {
+      "problem_id": 155,
+      "families": [
+        "design-structure"
+      ]
+    },
+    {
+      "problem_id": 160,
+      "families": [
+        "linked-list-pointers",
+        "hashmap-counting"
+      ],
+      "note": "Hash set and two-pointer length alignment are both canonical."
+    },
+    {
+      "problem_id": 162,
+      "families": [
+        "binary-search-index"
+      ]
+    },
+    {
+      "problem_id": 169,
+      "families": [
+        "hashmap-counting",
+        "greedy-scan"
+      ],
+      "note": "Counting and Boyer-Moore voting are both canonical."
+    },
+    {
+      "problem_id": 171,
+      "families": [
+        "math-arithmetic"
+      ]
+    },
+    {
+      "problem_id": 189,
+      "families": [
+        "two-pointers",
+        "simulation"
+      ],
+      "note": "Three-reversal rotation, simulated in place."
+    },
+    {
+      "problem_id": 190,
+      "families": [
+        "bit-manipulation"
+      ]
+    },
+    {
+      "problem_id": 191,
+      "families": [
+        "bit-manipulation"
+      ]
+    },
+    {
+      "problem_id": 198,
+      "families": [
+        "dp-1d"
+      ]
+    },
+    {
+      "problem_id": 199,
+      "families": [
+        "tree-traversal"
+      ]
+    },
+    {
+      "problem_id": 200,
+      "families": [
+        "bfs-flood-fill",
+        "graph-union-find"
+      ],
+      "note": "Union-find is a valid alternative to flood fill here."
+    },
+    {
+      "problem_id": 202,
+      "families": [
+        "hashmap-counting",
+        "two-pointers"
+      ],
+      "note": "Hash set and Floyd cycle detection are both canonical."
+    },
+    {
+      "problem_id": 203,
+      "families": [
+        "linked-list-pointers"
+      ]
+    },
+    {
+      "problem_id": 204,
+      "families": [
+        "math-arithmetic"
+      ]
+    },
+    {
+      "problem_id": 205,
+      "families": [
+        "hashmap-counting"
+      ]
+    },
+    {
+      "problem_id": 206,
+      "families": [
+        "linked-list-pointers"
+      ]
+    },
+    {
+      "problem_id": 207,
+      "families": [
+        "graph-topo-sort"
+      ]
+    },
+    {
+      "problem_id": 208,
+      "families": [
+        "trie-prefix",
+        "design-structure"
+      ]
+    },
+    {
+      "problem_id": 210,
+      "families": [
+        "graph-topo-sort"
+      ]
+    },
+    {
+      "problem_id": 211,
+      "families": [
+        "trie-prefix",
+        "design-structure"
+      ]
+    },
+    {
+      "problem_id": 213,
+      "families": [
+        "dp-1d"
+      ]
+    },
+    {
+      "problem_id": 215,
+      "families": [
+        "greedy-heap"
+      ]
+    },
+    {
+      "problem_id": 217,
+      "families": [
+        "hashmap-counting"
+      ]
+    },
+    {
+      "problem_id": 219,
+      "families": [
+        "hashmap-counting",
+        "sliding-window"
+      ]
+    },
+    {
+      "problem_id": 221,
+      "families": [
+        "dp-2d"
+      ]
+    },
+    {
+      "problem_id": 225,
+      "families": [
+        "design-structure"
+      ]
+    },
+    {
+      "problem_id": 226,
+      "families": [
+        "tree-traversal"
+      ]
+    },
+    {
+      "problem_id": 227,
+      "families": [
+        "stack-matching"
+      ]
+    },
+    {
+      "problem_id": 230,
+      "families": [
+        "tree-traversal"
+      ]
+    },
+    {
+      "problem_id": 231,
+      "families": [
+        "bit-manipulation",
+        "math-arithmetic"
+      ]
+    },
+    {
+      "problem_id": 232,
+      "families": [
+        "design-structure"
+      ]
+    },
+    {
+      "problem_id": 234,
+      "families": [
+        "linked-list-pointers",
+        "two-pointers"
+      ]
+    },
+    {
+      "problem_id": 236,
+      "families": [
+        "tree-traversal"
+      ]
+    },
+    {
+      "problem_id": 237,
+      "families": [
+        "linked-list-pointers"
+      ]
+    },
+    {
+      "problem_id": 238,
+      "families": [
+        "prefix-sums"
+      ]
+    },
+    {
+      "problem_id": 240,
+      "families": [
+        "binary-search-index",
+        "divide-conquer"
+      ]
+    },
+    {
+      "problem_id": 242,
+      "families": [
+        "hashmap-counting"
+      ]
+    },
+    {
+      "problem_id": 257,
+      "families": [
+        "tree-traversal"
+      ]
+    },
+    {
+      "problem_id": 258,
+      "families": [
+        "math-arithmetic"
+      ]
+    },
+    {
+      "problem_id": 263,
+      "families": [
+        "math-arithmetic"
+      ]
+    },
+    {
+      "problem_id": 268,
+      "families": [
+        "bit-manipulation",
+        "math-arithmetic"
+      ],
+      "note": "XOR cancellation and the Gauss sum are both canonical."
+    },
+    {
+      "problem_id": 279,
+      "families": [
+        "dp-1d",
+        "bfs-shortest-path"
+      ],
+      "note": "DP and BFS over remainders are both canonical."
+    },
+    {
+      "problem_id": 283,
+      "families": [
+        "two-pointers"
+      ]
+    },
+    {
+      "problem_id": 287,
+      "families": [
+        "binary-search-answer",
+        "two-pointers"
+      ],
+      "note": "Binary search on the value range and Floyd cycle detection are both canonical."
+    },
+    {
+      "problem_id": 290,
+      "families": [
+        "hashmap-counting"
+      ]
+    },
+    {
+      "problem_id": 292,
+      "families": [
+        "math-arithmetic"
+      ]
+    },
+    {
+      "problem_id": 295,
+      "families": [
+        "greedy-heap",
+        "design-structure"
+      ],
+      "note": "Two heaps behind a designed stream interface."
+    },
+    {
+      "problem_id": 300,
+      "families": [
+        "dp-1d",
+        "binary-search-index"
+      ],
+      "note": "DP and patience sorting with binary search are both canonical."
+    },
+    {
+      "problem_id": 322,
+      "families": [
+        "dp-1d",
+        "dp-knapsack"
+      ],
+      "note": "Unbounded knapsack over amounts, with a one-dimensional table."
+    },
+    {
+      "problem_id": 326,
+      "families": [
+        "math-arithmetic"
+      ]
+    },
+    {
+      "problem_id": 329,
+      "families": [
+        "dp-2d",
+        "graph-topo-sort"
+      ]
+    },
+    {
+      "problem_id": 337,
+      "families": [
+        "tree-traversal",
+        "dp-1d"
+      ]
+    },
+    {
+      "problem_id": 338,
+      "families": [
+        "dp-1d",
+        "bit-manipulation"
+      ]
+    },
+    {
+      "problem_id": 342,
+      "families": [
+        "bit-manipulation",
+        "math-arithmetic"
+      ]
+    },
+    {
+      "problem_id": 344,
+      "families": [
+        "two-pointers"
+      ]
+    },
+    {
+      "problem_id": 345,
+      "families": [
+        "two-pointers"
+      ]
+    },
+    {
+      "problem_id": 347,
+      "families": [
+        "greedy-heap",
+        "hashmap-counting"
+      ]
+    },
+    {
+      "problem_id": 349,
+      "families": [
+        "hashmap-counting",
+        "two-pointers"
+      ]
+    },
+    {
+      "problem_id": 350,
+      "families": [
+        "hashmap-counting",
+        "two-pointers"
+      ]
+    },
+    {
+      "problem_id": 367,
+      "families": [
+        "binary-search-answer"
+      ]
+    },
+    {
+      "problem_id": 371,
+      "families": [
+        "bit-manipulation"
+      ]
+    },
+    {
+      "problem_id": 373,
+      "families": [
+        "greedy-heap"
+      ]
+    },
+    {
+      "problem_id": 374,
+      "families": [
+        "binary-search-index"
+      ]
+    },
+    {
+      "problem_id": 378,
+      "families": [
+        "greedy-heap",
+        "binary-search-answer"
+      ],
+      "note": "Heap selection and binary search on the value are both canonical."
+    },
+    {
+      "problem_id": 383,
+      "families": [
+        "hashmap-counting"
+      ]
+    },
+    {
+      "problem_id": 387,
+      "families": [
+        "hashmap-counting"
+      ]
+    },
+    {
+      "problem_id": 389,
+      "families": [
+        "hashmap-counting",
+        "bit-manipulation"
+      ]
+    },
+    {
+      "problem_id": 392,
+      "families": [
+        "two-pointers",
+        "dp-1d"
+      ]
+    },
+    {
+      "problem_id": 394,
+      "families": [
+        "stack-matching"
+      ]
+    },
+    {
+      "problem_id": 401,
+      "families": [
+        "bit-manipulation",
+        "dfs-backtracking"
+      ]
+    },
+    {
+      "problem_id": 404,
+      "families": [
+        "tree-traversal"
+      ]
+    },
+    {
+      "problem_id": 405,
+      "families": [
+        "math-arithmetic",
+        "bit-manipulation"
+      ]
+    },
+    {
+      "problem_id": 409,
+      "families": [
+        "hashmap-counting",
+        "greedy-scan"
+      ]
+    },
+    {
+      "problem_id": 412,
+      "families": [
+        "math-arithmetic",
+        "simulation"
+      ]
+    },
+    {
+      "problem_id": 414,
+      "families": [
+        "greedy-scan"
+      ]
+    },
+    {
+      "problem_id": 415,
+      "families": [
+        "math-arithmetic",
+        "simulation"
+      ]
+    },
+    {
+      "problem_id": 416,
+      "families": [
+        "dp-knapsack"
+      ]
+    },
+    {
+      "problem_id": 435,
+      "families": [
+        "greedy-interval"
+      ]
+    },
+    {
+      "problem_id": 441,
+      "families": [
+        "binary-search-answer",
+        "math-arithmetic"
+      ]
+    },
+    {
+      "problem_id": 448,
+      "families": [
+        "hashmap-counting",
+        "simulation"
+      ],
+      "note": "Hash set and in-place index marking are both canonical."
+    },
+    {
+      "problem_id": 453,
+      "families": [
+        "math-arithmetic"
+      ]
+    },
+    {
+      "problem_id": 455,
+      "families": [
+        "greedy-scan"
+      ]
+    },
+    {
+      "problem_id": 461,
+      "families": [
+        "bit-manipulation"
+      ]
+    },
+    {
+      "problem_id": 463,
+      "families": [
+        "bfs-flood-fill"
+      ]
+    },
+    {
+      "problem_id": 476,
+      "families": [
+        "bit-manipulation"
+      ]
+    },
+    {
+      "problem_id": 485,
+      "families": [
+        "greedy-scan"
+      ]
+    },
+    {
+      "problem_id": 492,
+      "families": [
+        "math-arithmetic"
+      ]
+    },
+    {
+      "problem_id": 494,
+      "families": [
+        "dp-knapsack"
+      ]
+    },
+    {
+      "problem_id": 496,
+      "families": [
+        "stack-monotonic"
+      ]
+    },
+    {
+      "problem_id": 500,
+      "families": [
+        "hashmap-counting",
+        "string-manipulation"
+      ]
+    },
+    {
+      "problem_id": 501,
+      "families": [
+        "tree-traversal"
+      ]
+    },
+    {
+      "problem_id": 504,
+      "families": [
+        "math-arithmetic"
+      ]
+    },
+    {
+      "problem_id": 506,
+      "families": [
+        "hashmap-counting"
+      ],
+      "note": "Sort, then map each value to its rank."
+    },
+    {
+      "problem_id": 507,
+      "families": [
+        "math-arithmetic"
+      ]
+    },
+    {
+      "problem_id": 509,
+      "families": [
+        "dp-1d",
+        "math-arithmetic"
+      ]
+    },
+    {
+      "problem_id": 520,
+      "families": [
+        "string-manipulation"
+      ]
+    },
+    {
+      "problem_id": 521,
+      "families": [
+        "string-manipulation"
+      ]
+    },
+    {
+      "problem_id": 530,
+      "families": [
+        "tree-traversal"
+      ]
+    },
+    {
+      "problem_id": 532,
+      "families": [
+        "hashmap-counting",
+        "two-pointers"
+      ]
+    },
+    {
+      "problem_id": 541,
+      "families": [
+        "two-pointers",
+        "string-manipulation"
+      ]
+    },
+    {
+      "problem_id": 542,
+      "families": [
+        "bfs-shortest-path",
+        "dp-2d"
+      ],
+      "note": "Multi-source BFS and two-pass DP are both canonical."
+    },
+    {
+      "problem_id": 543,
+      "families": [
+        "tree-traversal"
+      ]
+    },
+    {
+      "problem_id": 557,
+      "families": [
+        "two-pointers",
+        "string-manipulation"
+      ]
+    },
+    {
+      "problem_id": 559,
+      "families": [
+        "tree-traversal"
+      ]
+    },
+    {
+      "problem_id": 561,
+      "families": [
+        "greedy-scan"
+      ]
+    },
+    {
+      "problem_id": 563,
+      "families": [
+        "tree-traversal"
+      ]
+    },
+    {
+      "problem_id": 566,
+      "families": [
+        "simulation"
+      ]
+    },
+    {
+      "problem_id": 572,
+      "families": [
+        "tree-traversal"
+      ]
+    },
+    {
+      "problem_id": 575,
+      "families": [
+        "hashmap-counting"
+      ]
+    },
+    {
+      "problem_id": 581,
+      "families": [
+        "two-pointers",
+        "stack-monotonic"
+      ],
+      "note": "Two-pointer and monotonic-stack scans are both canonical."
+    },
+    {
+      "problem_id": 589,
+      "families": [
+        "tree-traversal"
+      ]
+    },
+    {
+      "problem_id": 590,
+      "families": [
+        "tree-traversal"
+      ]
+    },
+    {
+      "problem_id": 594,
+      "families": [
+        "hashmap-counting",
+        "sliding-window"
+      ]
+    },
+    {
+      "problem_id": 598,
+      "families": [
+        "math-arithmetic"
+      ]
+    },
+    {
+      "problem_id": 599,
+      "families": [
+        "hashmap-counting"
+      ]
+    },
+    {
+      "problem_id": 605,
+      "families": [
+        "greedy-scan"
+      ]
+    },
+    {
+      "problem_id": 606,
+      "families": [
+        "tree-traversal"
+      ]
+    },
+    {
+      "problem_id": 617,
+      "families": [
+        "tree-traversal"
+      ]
+    },
+    {
+      "problem_id": 628,
+      "families": [
+        "math-arithmetic",
+        "greedy-scan"
+      ]
+    },
+    {
+      "problem_id": 633,
+      "families": [
+        "two-pointers",
+        "binary-search-index"
+      ]
+    },
+    {
+      "problem_id": 703,
+      "families": [
+        "greedy-heap",
+        "design-structure"
+      ],
+      "note": "Heap-backed stream behind a designed interface."
+    },
+    {
+      "problem_id": 704,
+      "families": [
+        "binary-search-index"
+      ]
+    },
+    {
+      "problem_id": 739,
+      "families": [
+        "stack-monotonic"
+      ]
+    },
+    {
+      "problem_id": 743,
+      "families": [
+        "graph-weighted-shortest-path"
+      ]
+    },
+    {
+      "problem_id": 787,
+      "families": [
+        "graph-weighted-shortest-path",
+        "dp-2d"
+      ]
+    },
+    {
+      "problem_id": 875,
+      "families": [
+        "binary-search-answer"
+      ]
+    },
+    {
+      "problem_id": 973,
+      "families": [
+        "greedy-heap"
+      ]
+    },
+    {
+      "problem_id": 994,
+      "families": [
+        "bfs-shortest-path"
+      ]
+    },
+    {
+      "problem_id": 1091,
+      "families": [
+        "bfs-shortest-path"
+      ]
+    },
+    {
+      "problem_id": 1143,
+      "families": [
+        "dp-2d"
+      ]
+    }
+  ]
+}
